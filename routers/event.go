@@ -9,6 +9,7 @@ import (
 
 func LoadEvent(r *gin.Engine) {
 	r.GET("/event", event)
+	r.POST("/event", event)
 }
 
 func event(c *gin.Context) {
