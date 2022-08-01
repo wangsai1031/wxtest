@@ -1,7 +1,10 @@
 package routers
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"wxtest/log"
+	"wxtest/util"
 )
 
 func LoadEvent(r *gin.Engine) {
@@ -9,6 +12,15 @@ func LoadEvent(r *gin.Engine) {
 }
 
 func event(c *gin.Context) {
-	echostr := c.DefaultQuery("echostr", "")
-	c.String(200, echostr)
+	inputs, err := util.RequestInputs(c)
+	if err != nil {
+		log.Error.Println(err.Error())
+		c.String(400, err.Error())
+		return
+	}
+
+	str := fmt.Sprintf("%+v", inputs)
+
+	log.Info.Println(str)
+	c.String(200, str)
 }
