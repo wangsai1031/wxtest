@@ -10,6 +10,8 @@ import (
 	"github.com/silenceper/wechat/v2/officialaccount/draft"
 	"github.com/silenceper/wechat/v2/officialaccount/freepublish"
 	"github.com/silenceper/wechat/v2/officialaccount/material"
+	"strings"
+	"time"
 	"weixin/log"
 )
 
@@ -134,6 +136,7 @@ ShowCoverPic       uint   `json:"show_cover_pic"`        // 是否显示封面�
 NeedOpenComment    uint   `json:"need_open_comment"`     // 是否打开评论，0不打开(默认)，1打开
 OnlyFansCanComment uint   `json:"only_fans_can_comment"` // 是否粉丝才可评论，0所有人可评论(默认)，1粉丝才可评论
 */
+// AddDraft 新建草稿
 func AddDraft(articles []*draft.Article) (string, error) {
 	officialAccount := GetOfficialAccount()
 	newDraft := officialAccount.GetDraft()
@@ -149,6 +152,7 @@ func AddDraft(articles []*draft.Article) (string, error) {
 	return mediaID, err
 }
 
+// PaginateDraft 获取草稿列表
 func PaginateDraft(offset, count int64, noReturnContent bool) (articleList draft.ArticleList, err error) {
 	officialAccount := GetOfficialAccount()
 	newDraft := officialAccount.GetDraft()
@@ -164,6 +168,8 @@ func PaginateDraft(offset, count int64, noReturnContent bool) (articleList draft
 	return
 }
 
+// Publish 发布接口。需要先将图文素材以草稿的形式保存（见“草稿箱/新建草稿”，
+// 如需从已保存的草稿中选择，见“草稿箱/获取草稿列表”），选择要发布的草稿 media_id 进行发布
 func Publish(draftId string) (publishID int64, err error) {
 	officialAccount := GetOfficialAccount()
 	newFreePublish := officialAccount.GetFreePublish()
@@ -179,17 +185,112 @@ func Publish(draftId string) (publishID int64, err error) {
 	return
 }
 
-func PublishStatus(publishID int64) (publishStatusList freepublish.PublishStatusList, err error) {
+// PublishStatus 获取文章发布状态
+func PublishStatus(publishID int64) (publishStatus freepublish.PublishStatusList, err error) {
 	officialAccount := GetOfficialAccount()
 	newFreePublish := officialAccount.GetFreePublish()
 
-	publishStatusList, err = newFreePublish.SelectStatus(publishID)
+	publishStatus, err = newFreePublish.SelectStatus(publishID)
 	if err != nil {
 		log.Error.Println("PublishStatus error", err.Error())
 		fmt.Println("PublishStatus", err)
 		return
 	}
 
-	log.Info.Println("PublishStatus", publishStatusList)
+	log.Info.Println("PublishStatus", publishStatus)
 	return
+}
+
+// Paginate 获取成功发布列表
+func PaginatePublish(offset, count int64, noReturnContent bool) (publishList freepublish.ArticleList, err error) {
+	officialAccount := GetOfficialAccount()
+	newFreePublish := officialAccount.GetFreePublish()
+
+	publishList, err = newFreePublish.Paginate(offset, count, noReturnContent)
+	if err != nil {
+		log.Error.Println("PaginatePublish error", err.Error())
+		fmt.Println("PaginatePublish", err)
+		return
+	}
+
+	log.Info.Println("PaginatePublish", publishList)
+	return
+}
+
+// 综合-发布文章接口，流程示例，非最终方案
+func PublishArticle() {
+	contentText := "xxx"
+
+	// 文章中的图片文件
+	contentImageFiles := []string{}
+
+	for _, imgFile := range contentImageFiles {
+		// 1. 上传文章中的图片，获取图片url
+		imgUrl, err := MediaUploadImg(imgFile)
+		if err != nil {
+			log.Error.Println(err)
+			return
+		}
+		// 2. 将文章内容中的图片替换为微信的图片链接
+		// TODO
+		contentText = strings.Replace(contentText, "图片占位", imgUrl, -1)
+	}
+
+	// 3. 上传文章封面图片，获取media_id
+	coverImgFile := ""
+	mediaID, _, err := MediaAddMaterial(material.MediaTypeImage, coverImgFile)
+	if err != nil {
+		log.Error.Println("MediaAddMaterial() error = %+v", err)
+		return
+	}
+
+	// 4. 创建草稿(可以是多篇文章)
+	articles := []*draft.Article{
+		{
+			Title:              "测试title",
+			Author:             "测试作者",
+			Digest:             "图文消息的摘要，仅有单图文消息才有摘要，多图文此处为空",
+			Content:            "<h1>文章正文</h1>",                                                             // 图文消息的具体内容，支持HTML标签，必须少于2万字符，小于1M，且去除JS
+			ContentSourceURL:   "https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html", // 图文消息的原文地址，即点击“阅读原文”后的URL
+			ThumbMediaID:       mediaID,                                                                     // 图文消息的封面图片素材id（必须是永久MediaID）
+			ShowCoverPic:       1,                                                                           // 是否显示封面，0为false，即不显示，1为true，即显示(默认)
+			NeedOpenComment:    1,                                                                           // 是否打开评论，0不打开(默认)，1打开
+			OnlyFansCanComment: 0,                                                                           // 是否粉丝才可评论，0所有人可评论(默认)，1粉丝才可评论
+		},
+	}
+
+	draftId, err := AddDraft(articles)
+	if err != nil {
+		log.Error.Println("AddDraft() error = %+v", err)
+		return
+	}
+
+	// 5. 发布文章
+	publishID, err := Publish(draftId)
+	if err != nil {
+		log.Error.Println("Publish() error = %+v", err)
+		return
+	}
+
+	// 6. 轮询监控发布状态（异步执行，此处仅做示例，也可同时监控发布异步通知）
+	for {
+		publishStatus, erro := PublishStatus(publishID)
+		if erro != nil {
+			log.Error.Println("PublishStatus() error = %+v", erro)
+			return
+		}
+
+		if publishStatus.PublishStatus == freepublish.PublishStatusPublishing {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		if publishStatus.PublishStatus == freepublish.PublishStatusSuccess {
+			log.Info.Println("PublishStatus() 发布成功 = %+v", publishStatus)
+			break
+		}
+
+		log.Info.Println("PublishStatus() 发布异常 = %+v", publishStatus)
+		break
+	}
 }

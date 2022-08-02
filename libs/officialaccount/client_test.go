@@ -259,14 +259,14 @@ func TestPublish(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			articleList, err := Publish(
+			publishID, err := Publish(
 				tt.args.draftId,
 			)
 			if err != nil {
 				t.Errorf("Publish() error = %+v", err)
 				return
 			}
-			t.Logf("Publish() success = %+v", articleList)
+			t.Logf("Publish() success = %+v", publishID)
 		})
 	}
 }
@@ -284,14 +284,43 @@ func TestPublishStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			articleList, err := PublishStatus(
+			publishStatus, err := PublishStatus(
 				tt.args.publishID,
 			)
 			if err != nil {
 				t.Errorf("PublishStatus() error = %+v", err)
 				return
 			}
-			t.Logf("PublishStatus() success = %+v", articleList)
+			t.Logf("PublishStatus() success = %+v", publishStatus)
+		})
+	}
+}
+
+func TestPaginatePublish(t *testing.T) {
+	type args struct {
+		offset          int64
+		count           int64
+		noReturnContent bool
+	}
+
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"test1", args{count: 20}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			articleList, err := PaginatePublish(
+				tt.args.offset,
+				tt.args.count,
+				tt.args.noReturnContent,
+			)
+			if err != nil {
+				t.Errorf("PaginateDraft() error = %+v", err)
+				return
+			}
+			t.Logf("PaginateDraft() success = %+v", articleList)
 		})
 	}
 }
