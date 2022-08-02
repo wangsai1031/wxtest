@@ -7,10 +7,20 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sync"
+	"weixin/log"
 )
 
-// RequestInputs 获取所有参数
-func RequestInputs(c *gin.Context) (map[string]interface{}, error) {
+func RequestInputs(req http.Request) {
+	req.ParseForm()
+	body, _ := ioutil.ReadAll(req.Body)
+	log.Info.Printf("req.URL: %+v", req.URL)
+	log.Info.Printf("req.Header: %+v", req.Header)
+	log.Info.Printf("req.Form: %+v", req.Form)
+	log.Info.Printf("req.Body: \n%+v", string(body))
+}
+
+// GinRequestInputs 获取所有参数
+func GinRequestInputs(c *gin.Context) (map[string]interface{}, error) {
 
 	const defaultMemory = 32 << 20
 	contentType := c.ContentType()
