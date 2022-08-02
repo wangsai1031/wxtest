@@ -7,17 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sync"
-	"weixin/log"
 )
-
-func RequestInputs(req http.Request) {
-	req.ParseForm()
-	body, _ := ioutil.ReadAll(req.Body)
-	log.Info.Printf("req.URL: %+v", req.URL)
-	log.Info.Printf("req.Header: %+v", req.Header)
-	log.Info.Printf("req.Form: %+v", req.Form)
-	log.Info.Printf("req.Body: \n%+v", string(body))
-}
 
 // GinRequestInputs 获取所有参数
 func GinRequestInputs(c *gin.Context) (map[string]interface{}, error) {

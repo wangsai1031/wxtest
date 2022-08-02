@@ -3,9 +3,9 @@ package routers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/silenceper/wechat/v2/officialaccount/message"
+	"weixin/common/util"
 	"weixin/libs/officialaccount"
 	"weixin/log"
-	"weixin/util"
 )
 
 func LoadEvent(r *gin.Engine) {

@@ -1,6 +1,7 @@
 package officialaccount
 
 import (
+	"context"
 	"fmt"
 	"github.com/silenceper/wechat/v2"
 	"github.com/silenceper/wechat/v2/cache"
@@ -12,24 +13,35 @@ import (
 	"github.com/silenceper/wechat/v2/officialaccount/material"
 	"strings"
 	"time"
+	"weixin/common/handlers/conf"
 	"weixin/log"
 )
 
-const (
-	AppId  = "wxedb8fc2aadd7bd51"
-	Secret = "a3409c9c98a57b6a9bd01637f847b687"
-	Token  = "wxtest"
-)
+//InitWechat 获取wechat实例
+//在这里已经设置了全局cache，则在具体获取公众号/小程序等操作实例之后无需再设置，设置即覆盖
+func InitWechat() *wechat.Wechat {
+	wc := wechat.NewWechat()
+	redisOpts := &cache.RedisOpts{
+		Host:        conf.Viper.GetString("redis.host"),
+		Password:    conf.Viper.GetString("redis.password"),
+		Database:    conf.Viper.GetInt("redis.database"),
+		MaxActive:   conf.Viper.GetInt("redis.max_active"),
+		MaxIdle:     conf.Viper.GetInt("redis.max_idle"),
+		IdleTimeout: conf.Viper.GetInt("redis.idle_timeout"),
+	}
+	redisCache := cache.NewRedis(context.Background(), redisOpts)
+	wc.SetCache(redisCache)
+	return wc
+}
 
 func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
-	wc := wechat.NewWechat()
+	wc := InitWechat()
 	//这里本地内存保存access_token，也可选择redis，memcache或者自定cache
-	memory := cache.NewMemory()
+
 	cfg := &config.Config{
-		AppID:     AppId,
-		AppSecret: Secret,
-		Token:     Token,
-		Cache:     memory,
+		AppID:     conf.Viper.GetString("wxOfficialAccount.app_id"),
+		AppSecret: conf.Viper.GetString("wxOfficialAccount.app_secret"),
+		Token:     conf.Viper.GetString("wxOfficialAccount.token"),
 	}
 
 	officialAccount = wc.GetOfficialAccount(cfg)

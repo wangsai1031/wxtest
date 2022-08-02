@@ -1,0 +1,13 @@
+[http]
+# 监听本地的端口
+addr = ":8000"
+
+# 使用redis来存放access_token
+[redis]
+host = "192.168.1.200:6379"
+
+# 微信公众号相关配置
+[wxOfficialAccount]
+app_id = "wxedb8fc2aadd7bd51"
+app_secret = "a3409c9c98a57b6a9bd01637f847b687"
+token = "wxtest"
