@@ -26,8 +26,8 @@ func ServeWechat(c *gin.Context) {
 		log.Info.Println("SetMessageHandler", msg.Content)
 		//TODO
 		//回复消息：演示回复用户发送的消息
-		text := message.NewText(msg.Content)
-		return &message.Reply{MsgType: message.MsgTypeImage, MsgData: text}
+		text := message.NewText("Hello " + msg.Content)
+		return &message.Reply{MsgType: message.MsgTypeText, MsgData: text}
 
 		//article1 := message.NewArticle("测试图文1", "图文描述", "", "")
 		//articles := []*message.Article{article1}
