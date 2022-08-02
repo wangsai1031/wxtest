@@ -3,9 +3,9 @@ package routers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/silenceper/wechat/v2/officialaccount/message"
+	"weixin/common/handlers/log"
 	"weixin/common/util"
 	"weixin/libs/officialaccount"
-	"weixin/log"
 )
 
 func LoadEvent(r *gin.Engine) {
@@ -15,7 +15,7 @@ func LoadEvent(r *gin.Engine) {
 //ServeWechat 处理消息
 func ServeWechat(c *gin.Context) {
 	requestInput, _ := util.GinRequestInputs(c)
-	log.Info.Println("ServeWechat", requestInput)
+	log.Trace.Info("ServeWechat", requestInput)
 
 	officialAccount := officialaccount.GetOfficialAccount()
 	// 传入request和responseWriter
@@ -23,7 +23,7 @@ func ServeWechat(c *gin.Context) {
 	server.SkipValidate(true)
 	//设置接收消息的处理方法
 	server.SetMessageHandler(func(msg *message.MixMessage) *message.Reply {
-		log.Info.Println("SetMessageHandler", msg.Content)
+		log.Trace.Info("SetMessageHandler", msg.Content)
 		//TODO
 		//回复消息：演示回复用户发送的消息
 		text := message.NewText("Hello " + msg.Content)
@@ -52,13 +52,13 @@ func ServeWechat(c *gin.Context) {
 	//处理消息接收以及回复
 	err := server.Serve()
 	if err != nil {
-		log.Error.Printf("Serve Error, err=%+v", err)
+		log.Trace.Error("Serve Error, err= ", err)
 		return
 	}
 	//发送回复的消息
 	err = server.Send()
 	if err != nil {
-		log.Error.Printf("Send Error, err=%+v", err)
+		log.Trace.Error("Send Error, err= ", err)
 		return
 	}
 }

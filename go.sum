@@ -952,3 +952,7 @@ rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
+team.wphr.vip/technology-group/infrastructure/logger v0.0.4 h1:+smMinuozULLmrczrdcpWlMVqCIDvtT36255FvGKtXE=
+team.wphr.vip/technology-group/infrastructure/logger v0.0.4/go.mod h1:Tht1wefDHMxkZC7vdjURPCdxrjHp/1nbTiZ0Ug72ofc=
+team.wphr.vip/technology-group/infrastructure/trace v0.0.5 h1:5Oa7gAv5jpVg7yCS/8kpId2WyBGa9OHPlx7D4Wj5BtQ=
+team.wphr.vip/technology-group/infrastructure/trace v0.0.5/go.mod h1:l4mDmlcaqfdCSuBc0rLRPFH1WrujPhqsJFuPsVFi3VA=

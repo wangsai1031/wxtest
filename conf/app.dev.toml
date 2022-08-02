@@ -11,3 +11,13 @@ host = "192.168.1.200:6379"
 app_id = "wxedb8fc2aadd7bd51"
 app_secret = "a3409c9c98a57b6a9bd01637f847b687"
 token = "wxtest"
+
+
+[log]
+file_prefix = "weixin"
+dir = "./log"
+level = "info"
+auto_clear = true
+clear_hours = 1
+separate = true
+log_debug = false

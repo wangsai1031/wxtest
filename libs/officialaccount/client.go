@@ -12,9 +12,8 @@ import (
 	"github.com/silenceper/wechat/v2/officialaccount/freepublish"
 	"github.com/silenceper/wechat/v2/officialaccount/material"
 	"strings"
-	"time"
 	"weixin/common/handlers/conf"
-	"weixin/log"
+	"weixin/common/handlers/log"
 )
 
 //InitWechat 获取wechat实例
@@ -47,8 +46,7 @@ func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
 	officialAccount = wc.GetOfficialAccount(cfg)
 
 	accessToken, _ := officialAccount.GetAccessToken()
-	fmt.Println("GetAccessToken", accessToken)
-	log.Info.Println("GetAccessToken", accessToken)
+	log.Trace.Info("GetAccessToken", accessToken)
 	return
 }
 
@@ -65,12 +63,12 @@ func MediaUpload(mediaType material.MediaType, filename string) (media material.
 
 	media, err = newMaterial.MediaUpload(mediaType, filename)
 	if err != nil {
-		log.Error.Println("MediaUpload error", err.Error())
+		log.Trace.Error("MediaUpload error", err.Error())
 		fmt.Println("MediaUpload", err)
 		return
 	}
 
-	log.Info.Println("MediaUpload", media)
+	log.Trace.Info("MediaUpload", media)
 	return
 }
 
@@ -82,12 +80,11 @@ func MediaUploadImg(filename string) (string, error) {
 
 	url, err := newMaterial.ImageUpload(filename)
 	if err != nil {
-		log.Error.Println("MediaUploadImg error", err.Error())
-		fmt.Println("MediaUploadImg", err)
+		log.Trace.Error("MediaUploadImg error", err.Error())
 		return "", err
 	}
 
-	log.Info.Println("MediaUploadImg", url)
+	log.Trace.Info("MediaUploadImg", url)
 	return url, err
 }
 
@@ -99,12 +96,11 @@ func MediaAddMaterial(mediaType material.MediaType, filename string) (string, st
 
 	mediaID, url, err := newMaterial.AddMaterial(mediaType, filename)
 	if err != nil {
-		log.Error.Println("MediaAddMaterial error", err.Error())
-		fmt.Println("MediaAddMaterial", err)
+		log.Trace.Error("MediaAddMaterial error", err.Error())
 		return "", "", err
 	}
 
-	log.Info.Println("MediaAddMaterial", mediaID, url)
+	log.Trace.Info("MediaAddMaterial", mediaID, url)
 	return mediaID, url, err
 }
 
@@ -119,12 +115,11 @@ func BatchGetMaterial(permanentMaterialType material.PermanentMaterialType, offs
 	articleList, err = newMaterial.BatchGetMaterial(permanentMaterialType, offset, count)
 
 	if err != nil {
-		log.Error.Println("GetMaterialIndex error", err.Error())
-		fmt.Println("GetMaterialIndex", err)
+		log.Trace.Error("GetMaterialIndex error", err.Error())
 		return
 	}
 
-	log.Info.Println("GetMaterialIndex", articleList)
+	log.Trace.Info("GetMaterialIndex", articleList)
 	return
 }
 
@@ -155,12 +150,11 @@ func AddDraft(articles []*draft.Article) (string, error) {
 
 	mediaID, err := newDraft.AddDraft(articles)
 	if err != nil {
-		log.Error.Println("AddDraft error", err.Error())
-		fmt.Println("AddDraft", err)
+		log.Trace.Error("AddDraft error", err.Error())
 		return "", err
 	}
 
-	log.Info.Println("AddDraft", mediaID)
+	log.Trace.Info("AddDraft", mediaID)
 	return mediaID, err
 }
 
@@ -171,12 +165,12 @@ func PaginateDraft(offset, count int64, noReturnContent bool) (articleList draft
 
 	articleList, err = newDraft.PaginateDraft(offset, count, noReturnContent)
 	if err != nil {
-		log.Error.Println("PaginateDraft error", err.Error())
+		log.Trace.Error("PaginateDraft error", err.Error())
 		fmt.Println("PaginateDraft", err)
 		return
 	}
 
-	log.Info.Println("PaginateDraft", articleList)
+	log.Trace.Info("PaginateDraft", articleList)
 	return
 }
 
@@ -188,12 +182,12 @@ func Publish(draftId string) (publishID int64, err error) {
 
 	publishID, err = newFreePublish.Publish(draftId)
 	if err != nil {
-		log.Error.Println("Publish error", err.Error())
+		log.Trace.Error("Publish error", err.Error())
 		fmt.Println("Publish", err)
 		return
 	}
 
-	log.Info.Println("Publish", publishID)
+	log.Trace.Info("Publish", publishID)
 	return
 }
 
@@ -204,12 +198,12 @@ func PublishStatus(publishID int64) (publishStatus freepublish.PublishStatusList
 
 	publishStatus, err = newFreePublish.SelectStatus(publishID)
 	if err != nil {
-		log.Error.Println("PublishStatus error", err.Error())
+		log.Trace.Error("PublishStatus error", err.Error())
 		fmt.Println("PublishStatus", err)
 		return
 	}
 
-	log.Info.Println("PublishStatus", publishStatus)
+	log.Trace.Info("PublishStatus", publishStatus)
 	return
 }
 
@@ -220,89 +214,82 @@ func PaginatePublish(offset, count int64, noReturnContent bool) (publishList fre
 
 	publishList, err = newFreePublish.Paginate(offset, count, noReturnContent)
 	if err != nil {
-		log.Error.Println("PaginatePublish error", err.Error())
+		log.Trace.Error("PaginatePublish error", err.Error())
 		fmt.Println("PaginatePublish", err)
 		return
 	}
 
-	log.Info.Println("PaginatePublish", publishList)
+	log.Trace.Info("PaginatePublish", publishList)
 	return
 }
 
+type ContentImageFile struct {
+	FilePath    string // 文件路径
+	Placeholder string // 图片在文章内容中的占位符（该占位符将会替换为微信图片链接）
+}
+
+type Article struct {
+	draftArticle      draft.Article
+	ContentImageFiles []*ContentImageFile
+	CoverImageFile    string
+}
+
 // 综合-发布文章接口，流程示例，非最终方案
-func PublishArticle() {
-	contentText := "xxx"
+func PublishArticle(articles []*Article) {
 
-	// 文章中的图片文件
-	contentImageFiles := []string{}
+	// 可以同时发布多篇文章
+	var draftArticles []*draft.Article
 
-	for _, imgFile := range contentImageFiles {
-		// 1. 上传文章中的图片，获取图片url
-		imgUrl, err := MediaUploadImg(imgFile)
-		if err != nil {
-			log.Error.Println(err)
-			return
+	for _, article := range articles {
+		draftArticle := article.draftArticle
+
+		contentText := draftArticle.Content
+
+		// 文章中的图片文件
+		contentImageFiles := article.ContentImageFiles
+
+		for _, imgFile := range contentImageFiles {
+			// 1. 上传文章中的图片，获取图片url
+			imgUrl, err := MediaUploadImg(imgFile.FilePath)
+			if err != nil {
+				log.Trace.Error("MediaUploadImg", err)
+				return
+			}
+			// 2. 将文章内容中的图片替换为微信的图片链接
+			contentText = strings.Replace(contentText, imgFile.Placeholder, imgUrl, -1)
 		}
-		// 2. 将文章内容中的图片替换为微信的图片链接
-		// TODO
-		contentText = strings.Replace(contentText, "图片占位", imgUrl, -1)
+
+		draftArticle.Content = contentText
+
+		if article.CoverImageFile != "" && draftArticle.ShowCoverPic == 1 {
+			// 3. 上传文章封面图片，获取media_id
+			coverMediaID, _, err := MediaAddMaterial(material.MediaTypeImage, article.CoverImageFile)
+			if err != nil {
+				log.Trace.Error("MediaAddMaterial() error = ", err)
+				return
+			}
+
+			draftArticle.ThumbMediaID = coverMediaID
+		}
+
+		draftArticles = append(draftArticles, &draftArticle)
 	}
 
-	// 3. 上传文章封面图片，获取media_id
-	coverImgFile := ""
-	mediaID, _, err := MediaAddMaterial(material.MediaTypeImage, coverImgFile)
+	draftId, err := AddDraft(draftArticles)
 	if err != nil {
-		log.Error.Println("MediaAddMaterial() error = %+v", err)
-		return
-	}
-
-	// 4. 创建草稿(可以是多篇文章)
-	articles := []*draft.Article{
-		{
-			Title:              "测试title",
-			Author:             "测试作者",
-			Digest:             "图文消息的摘要，仅有单图文消息才有摘要，多图文此处为空",
-			Content:            "<h1>文章正文</h1>",                                                             // 图文消息的具体内容，支持HTML标签，必须少于2万字符，小于1M，且去除JS
-			ContentSourceURL:   "https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html", // 图文消息的原文地址，即点击“阅读原文”后的URL
-			ThumbMediaID:       mediaID,                                                                     // 图文消息的封面图片素材id（必须是永久MediaID）
-			ShowCoverPic:       1,                                                                           // 是否显示封面，0为false，即不显示，1为true，即显示(默认)
-			NeedOpenComment:    1,                                                                           // 是否打开评论，0不打开(默认)，1打开
-			OnlyFansCanComment: 0,                                                                           // 是否粉丝才可评论，0所有人可评论(默认)，1粉丝才可评论
-		},
-	}
-
-	draftId, err := AddDraft(articles)
-	if err != nil {
-		log.Error.Println("AddDraft() error = %+v", err)
+		log.Trace.Error("AddDraft() error = ", err)
 		return
 	}
 
 	// 5. 发布文章
 	publishID, err := Publish(draftId)
 	if err != nil {
-		log.Error.Println("Publish() error = %+v", err)
+		log.Trace.Error("Publish() error = ", err)
 		return
 	}
 
-	// 6. 轮询监控发布状态（异步执行，此处仅做示例，也可同时监控发布异步通知）
-	for {
-		publishStatus, erro := PublishStatus(publishID)
-		if erro != nil {
-			log.Error.Println("PublishStatus() error = %+v", erro)
-			return
-		}
+	// 6. 轮询监控发布状态（异步执行）
+	TriggerPublishStatusCheckEvent(publishID)
 
-		if publishStatus.PublishStatus == freepublish.PublishStatusPublishing {
-			time.Sleep(time.Second)
-			continue
-		}
-
-		if publishStatus.PublishStatus == freepublish.PublishStatusSuccess {
-			log.Info.Println("PublishStatus() 发布成功 = %+v", publishStatus)
-			break
-		}
-
-		log.Info.Println("PublishStatus() 发布异常 = %+v", publishStatus)
-		break
-	}
+	return
 }

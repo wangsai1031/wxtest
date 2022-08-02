@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"os"
+	"team.wphr.vip/technology-group/infrastructure/trace"
 	"weixin/common/handlers/conf"
+	"weixin/common/handlers/log"
+	"weixin/common/util"
+	"weixin/libs/officialaccount"
 	"weixin/routers"
 )
 
@@ -18,14 +24,31 @@ func init() {
 	fmt.Printf("confPath is %s\n", confPath)
 
 	conf.InitConf(confPath)
+
+	log.Init()
 }
 
 func main() {
-	r := gin.Default()
 
+	// context init
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	// 监控微信任务
+	go util.SafeGo(func() {
+		officialaccount.TaskRun(ctx)
+	})
+
+	// gin
+	r := gin.Default()
 	routers.LoadEvent(r)
 
 	addr := conf.Viper.GetString("http.addr")
 
-	r.Run(addr)
+	if err := r.Run(addr); err != nil {
+		log.Trace.Fatalf(ctx, trace.DLTagUndefined, "gin Run err %v \n", err)
+		cancel()
+		os.Exit(1)
+	}
+
+	cancel()
 }
