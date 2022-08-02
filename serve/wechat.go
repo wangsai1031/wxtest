@@ -18,8 +18,6 @@ func ServeWechat(rw http.ResponseWriter, req *http.Request) {
 	// 传入request和responseWriter
 	server := officialAccount.GetServer(req, rw)
 
-	util.RequestInputs(*req)
-
 	//关闭接口验证，则validate结果则一直返回true
 	server.SkipValidate(true)
 	//设置接收消息的处理方法
@@ -39,6 +37,7 @@ func ServeWechat(rw http.ResponseWriter, req *http.Request) {
 	}
 	//发送回复的消息
 	server.Send()
+	util.RequestInputs(*req)
 }
 
 func Wechat() {

@@ -1,19 +1,14 @@
 package main
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
-	"weixin/log"
-	"weixin/serve"
+	"github.com/gin-gonic/gin"
+	"weixin/routers"
 )
 
 func main() {
-	chSig := make(chan os.Signal, 1)
-	signal.Notify(chSig, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	r := gin.Default()
 
-	go serve.Wechat()
+	routers.LoadEvent(r)
 
-	<-chSig
-	log.Info.Println("process exit")
+	r.Run(":8000")
 }
