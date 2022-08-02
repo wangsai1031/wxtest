@@ -3,6 +3,7 @@ package serve
 import (
 	"fmt"
 	"github.com/silenceper/wechat/v2/officialaccount/message"
+	"io"
 	"net/http"
 	"os"
 	"weixin/libs/officialaccount"
@@ -32,9 +33,8 @@ func ServeWechat(rw http.ResponseWriter, req *http.Request) {
 
 	//处理消息接收以及回复
 	err := server.Serve()
-	if err != nil {
-		log.Error.Println(err.Error())
-		fmt.Println(err)
+	if err != nil && err != io.EOF {
+		log.Error.Println(err)
 		return
 	}
 	//发送回复的消息

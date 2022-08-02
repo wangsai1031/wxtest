@@ -254,7 +254,8 @@ func TestPublish(t *testing.T) {
 		name string
 		args args
 	}{
-		{"test1", args{draftId: "HEIhl0HtYZrgMLz4_jBrzsN0OyfofifBeaIk-gKHNt9-Qe4GLJoKKPe6-azsj4y4"}},
+		//{"test1", args{draftId: "HEIhl0HtYZrgMLz4_jBrzsN0OyfofifBeaIk-gKHNt9-Qe4GLJoKKPe6-azsj4y4"}},
+		{"test1", args{draftId: "HEIhl0HtYZrgMLz4_jBrzvDwn26LA7sMY1J9tAyjJ5BXTaZk9yxLHF6A4Nk8ZT8O"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
