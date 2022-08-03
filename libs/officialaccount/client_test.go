@@ -1,6 +1,7 @@
 package officialaccount
 
 import (
+	"github.com/silenceper/wechat/v2/officialaccount/broadcast"
 	"github.com/silenceper/wechat/v2/officialaccount/draft"
 	"github.com/silenceper/wechat/v2/officialaccount/material"
 	"testing"
@@ -177,6 +178,8 @@ func TestGetQuota(t *testing.T) {
 		{"发布状态轮询", args{"/cgi-bin/freepublish/get"}},
 		{"获取成功发布列表", args{"/cgi-bin/freepublish/batchget"}},
 		{"清空 api 的调用quota", args{"/cgi-bin/clear_quota"}},
+		{"根据标签进行群发", args{"/cgi-bin/message/mass/sendall"}},
+		{"查询群发消息发送状态", args{"/cgi-bin/message/mass/get"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -264,6 +267,7 @@ func TestAddDraft(t *testing.T) {
 			Content:            content1,
 			ContentSourceURL:   "https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html",
 			ThumbMediaID:       "HEIhl0HtYZrgMLz4_jBrzk4TqXJpRKRvWy6yw8ggP7NDAwlhHXqTcPiPgheoaw_b",
+			ShowCoverPic:       1,
 			NeedOpenComment:    1,
 			OnlyFansCanComment: 0,
 		},
@@ -274,6 +278,7 @@ func TestAddDraft(t *testing.T) {
 			Content:            content2,
 			ContentSourceURL:   "https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html",
 			ThumbMediaID:       "HEIhl0HtYZrgMLz4_jBrzk4TqXJpRKRvWy6yw8ggP7NDAwlhHXqTcPiPgheoaw_b",
+			ShowCoverPic:       1,
 			NeedOpenComment:    1,
 			OnlyFansCanComment: 0,
 		},
@@ -407,10 +412,64 @@ func TestPaginatePublish(t *testing.T) {
 				tt.args.noReturnContent,
 			)
 			if err != nil {
-				t.Errorf("PaginateDraft() error = %+v", err)
+				t.Errorf("PaginatePublish() error = %+v", err)
 				return
 			}
-			t.Logf("PaginateDraft() success = %+v", articleList)
+			t.Logf("PaginatePublish() success = %+v", articleList)
+		})
+	}
+}
+
+func TestSendNews(t *testing.T) {
+	type args struct {
+		user          *broadcast.User
+		mediaID       string
+		ignoreReprint bool
+	}
+
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"test1", args{user: nil, mediaID: "HEIhl0HtYZrgMLz4_jBrzkBEie1iIiN8mGfNXabEMt4zOtGrUJg-uhF5fQYPO8cc", ignoreReprint: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			articleList, err := SendNews(
+				tt.args.user,
+				tt.args.mediaID,
+				tt.args.ignoreReprint,
+			)
+			if err != nil {
+				t.Errorf("TestSendNews() error = %+v", err)
+				return
+			}
+			t.Logf("TestSendNews() success = %+v", articleList)
+		})
+	}
+}
+
+func TestGetMassStatus(t *testing.T) {
+	type args struct {
+		msgId int64
+	}
+
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"test1", args{1000000002}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			articleList, err := GetMassStatus(
+				tt.args.msgId,
+			)
+			if err != nil {
+				t.Errorf("TestGetMassStatus() error = %+v", err)
+				return
+			}
+			t.Logf("TestGetMassStatus() success = %+v", articleList)
 		})
 	}
 }
@@ -531,6 +590,7 @@ func TestPublishArticle(t *testing.T) {
 				Content:            content1,
 				ContentSourceURL:   "https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html",
 				ThumbMediaID:       "",
+				ShowCoverPic:       1,
 				NeedOpenComment:    1,
 				OnlyFansCanComment: 0,
 			},
@@ -555,6 +615,7 @@ func TestPublishArticle(t *testing.T) {
 				Title:        "2综合测试title",
 				Content:      content2,
 				ThumbMediaID: "",
+				ShowCoverPic: 1,
 			},
 			ContentImageFiles: []*ContentImageFile{
 				{
@@ -583,6 +644,190 @@ func TestPublishArticle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			articleList, err := PublishArticle(
+				tt.args.articles,
+			)
+			if err != nil {
+				t.Errorf("PaginateDraft() error = %+v", err)
+				return
+			}
+			t.Logf("PaginateDraft() success = %+v", articleList)
+		})
+	}
+
+	// 不立即结束，给异步监控发布状态一点时间
+	time.Sleep(time.Minute)
+}
+
+// 综合-图文消息群发，推送给所有订阅用户
+func TestSendNewsArticle(t *testing.T) {
+	// 监控微信任务
+	go util.SafeGo(TaskRun)
+
+	type args struct {
+		articles []*Article
+	}
+
+	content1 := `
+<div class="content custom">
+	<p>开发者可新增常用的素材到草稿箱中进行使用。上传到草稿箱中的素材被群发或发布后，该素材将从草稿箱中移除。新增草稿可在公众平台官网 - 草稿箱中查看和管理。</p> 
+	<h2 id="接口请求说明"> 接口请求说明</h2> 
+	<p>调用示例</p> 
+	<div class="language-json extra-class">
+		<pre class="language-json">
+			<code>
+				<span class="token punctuation">{</span>
+				<span class="token property">"articles"</span>
+				<span class="token comment">//若新增的是多图文素材，则此处应还有几段 articles 结构</span>
+				<span class="token punctuation">]</span>
+				<span class="token punctuation">}</span>
+			</code>
+		</pre>
+	</div>
+	<img title="上传图片1" src="{#1#}">
+	<img title="上传图片2" src="{#2#}">
+	<img title="上传图片3" src="{#3#}">
+	<img title="上传图片2" src="{#2#}">
+	<img title="上传图片1" src="{#1#}">
+	<p>请求参数说明</p>
+	<div class="table-wrp">
+		<table>
+			<thead>
+			<tr><th>参数</th> <th>是否必须</th> <th>说明</th></tr>
+			</thead> 
+			<tbody>
+			<tr><td>title</td> <td>是</td> <td>标题</td></tr> <tr><td>author</td> <td>否</td> <td>作者</td></tr> <tr><td>digest</td> <td>否</td> <td>图文消息的摘要，仅有单图文消息才有摘要，多图文此处为空。如果本字段为没有填写，则默认抓取正文前54个字。</td></tr> 
+			<tr><td>content</td> <td>是</td> <td>图文消息的具体内容，支持 HTML 标签，必须少于2万字符，小于1M，且此处会去除 JS ,涉及图片 url 必须来源 "上传图文消息内的图片获取URL"接口获取。外部图片 url 将被过滤。</td></tr> 
+			<tr><td>content_source_url</td> <td>否</td> <td>图文消息的原文地址，即点击“阅读原文”后的URL</td></tr> 
+			<tr><td>thumb_media_id</td> <td>是</td> <td>图文消息的封面图片素材id（必须是永久MediaID）</td></tr> 
+			<tr><td>need_open_comment</td> <td>否</td> <td>Uint32 是否打开评论，0不打开(默认)，1打开</td></tr> 
+			<tr><td>only_fans_can_comment</td> <td>否</td> <td>Uint32 是否粉丝才可评论，0所有人可评论(默认)，1粉丝才可评论</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<h2 id="接口返回说明"> 接口返回说明</h2> 
+	<p>返回参数说明</p> 
+	<div class="table-wrp">
+		<table>
+		<thead><tr><th>参数</th> <th>描述</th></tr></thead> 
+		<tbody><tr><td>media_id</td> <td>上传后的获取标志，长度不固定，但不会超过 128 字符</td></tr>
+		</tbody>
+		</table>
+	</div>
+</div>
+`
+
+	content2 := `
+<div class="content custom">
+	<p>开发者可新增常用的素材到草稿箱中进行使用。上传到草稿箱中的素材被群发或发布后，该素材将从草稿箱中移除。新增草稿可在公众平台官网 - 草稿箱中查看和管理。</p> 
+	<h2 id="接口请求说明"> 接口请求说明</h2> 
+	<p>调用示例</p> 
+	<div class="language-json extra-class">
+		<pre class="language-json">
+			<code>
+				<span class="token punctuation">{</span>
+				<span class="token property">"articles"</span>
+				<span class="token comment">//若新增的是多图文素材，则此处应还有几段 articles 结构</span>
+				<span class="token punctuation">]</span>
+				<span class="token punctuation">}</span>
+			</code>
+		</pre>
+	</div>
+	<img title="上传图片1" src="{#1#}">
+	<img title="上传图片2" src="{#2#}">
+	<img title="上传图片3" src="{#3#}">
+	<img title="上传图片2" src="{#2#}">
+	<img title="上传图片1" src="{#1#}">
+    <p>请求参数说明</p>
+	<div class="table-wrp">
+		<table>
+			<thead>
+			<tr><th>参数</th> <th>是否必须</th> <th>说明</th></tr>
+			</thead> 
+			<tbody>
+			<tr><td>title</td> <td>是</td> <td>标题</td></tr> <tr><td>author</td> <td>否</td> <td>作者</td></tr> <tr><td>digest</td> <td>否</td> <td>图文消息的摘要，仅有单图文消息才有摘要，多图文此处为空。如果本字段为没有填写，则默认抓取正文前54个字。</td></tr> 
+			<tr><td>content</td> <td>是</td> <td>图文消息的具体内容，支持 HTML 标签，必须少于2万字符，小于1M，且此处会去除 JS ,涉及图片 url 必须来源 "上传图文消息内的图片获取URL"接口获取。外部图片 url 将被过滤。</td></tr> 
+			<tr><td>content_source_url</td> <td>否</td> <td>图文消息的原文地址，即点击“阅读原文”后的URL</td></tr> 
+			<tr><td>thumb_media_id</td> <td>是</td> <td>图文消息的封面图片素材id（必须是永久MediaID）</td></tr> 
+			<tr><td>need_open_comment</td> <td>否</td> <td>Uint32 是否打开评论，0不打开(默认)，1打开</td></tr> 
+			<tr><td>only_fans_can_comment</td> <td>否</td> <td>Uint32 是否粉丝才可评论，0所有人可评论(默认)，1粉丝才可评论</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<h2 id="接口返回说明"> 接口返回说明</h2> 
+	<p>返回参数说明</p> 
+	<div class="table-wrp">
+		<table>
+		<thead><tr><th>参数</th> <th>描述</th></tr></thead> 
+		<tbody><tr><td>media_id</td> <td>上传后的获取标志，长度不固定，但不会超过 128 字符</td></tr>
+		</tbody>
+		</table>
+	</div>
+</div>
+`
+
+	articles := []*Article{
+		{
+			DraftArticle: draft.Article{
+				Title:              "1综合测试title",
+				Author:             "1综合测试作者",
+				Digest:             "1图文消息的摘要，仅有单图文消息才有摘要，多图文此处为空",
+				Content:            content1,
+				ContentSourceURL:   "https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html",
+				ThumbMediaID:       "",
+				ShowCoverPic:       1,
+				NeedOpenComment:    1,
+				OnlyFansCanComment: 0,
+			},
+			ContentImageFiles: []*ContentImageFile{
+				{
+					FilePath:    "./testmedia/2022-08-02_103202.png",
+					Placeholder: "{#1#}",
+				},
+				{
+					FilePath:    "./testmedia/process_daotu.png",
+					Placeholder: "{#2#}",
+				},
+				{
+					FilePath:    "./testmedia/String_struct.jpg",
+					Placeholder: "{#3#}",
+				},
+			},
+			CoverImageFile: "./testmedia/String_struct.jpg",
+		},
+		{
+			DraftArticle: draft.Article{
+				Title:        "2综合测试title",
+				Content:      content2,
+				ThumbMediaID: "",
+				ShowCoverPic: 1,
+			},
+			ContentImageFiles: []*ContentImageFile{
+				{
+					FilePath:    "./testmedia/2022-08-02_103202.png",
+					Placeholder: "{#3#}",
+				},
+				{
+					FilePath:    "./testmedia/process_daotu.png",
+					Placeholder: "{#2#}",
+				},
+				{
+					FilePath:    "./testmedia/String_struct.jpg",
+					Placeholder: "{#1#}",
+				},
+			},
+			CoverImageFile: "./testmedia/process_daotu.png",
+		},
+	}
+
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"test1", args{articles}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			articleList, err := SendNewsArticle(
 				tt.args.articles,
 			)
 			if err != nil {

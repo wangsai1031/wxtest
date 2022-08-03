@@ -18,6 +18,6 @@ file_prefix = "weixin"
 dir = "./log"
 level = "info"
 auto_clear = true
-clear_hours = 1
+clear_hours = 24
 separate = true
 log_debug = false

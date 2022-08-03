@@ -8,14 +8,25 @@ import (
 	"github.com/silenceper/wechat/v2/cache"
 	"github.com/silenceper/wechat/v2/officialaccount"
 	"github.com/silenceper/wechat/v2/officialaccount/basic"
+	"github.com/silenceper/wechat/v2/officialaccount/broadcast"
 	"github.com/silenceper/wechat/v2/officialaccount/config"
 	"github.com/silenceper/wechat/v2/officialaccount/draft"
 	"github.com/silenceper/wechat/v2/officialaccount/freepublish"
 	"github.com/silenceper/wechat/v2/officialaccount/material"
 	"github.com/silenceper/wechat/v2/util"
+	"strconv"
 	"strings"
 	"weixin/common/handlers/conf"
 	"weixin/common/handlers/log"
+)
+
+type SendMsgStatus string
+
+const (
+	SendMsgStatusSendSuccess SendMsgStatus = "SEND_SUCCESS" //发送成功
+	SendMsgStatusSending     SendMsgStatus = "SENDING"      //发送中
+	SendMsgStatusSendFail    SendMsgStatus = "SEND_FAIL"    //发送失败
+	SendMsgStatusDELETE      SendMsgStatus = "DELETE"       //已删除
 )
 
 //InitWechat 获取wechat实例
@@ -30,22 +41,32 @@ func InitWechat() *wechat.Wechat {
 		MaxIdle:     conf.Viper.GetInt("redis.max_idle"),
 		IdleTimeout: conf.Viper.GetInt("redis.idle_timeout"),
 	}
+
+	log.Trace.Info("redisOpts ", redisOpts)
+
 	redisCache := cache.NewRedis(context.Background(), redisOpts)
 	wc.SetCache(redisCache)
 	return wc
 }
 
-func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
-	wc := InitWechat()
-	//这里本地内存保存access_token，也可选择redis，memcache或者自定cache
+var officialAccountInstance *officialaccount.OfficialAccount
 
-	cfg := &config.Config{
-		AppID:     conf.Viper.GetString("wxOfficialAccount.app_id"),
-		AppSecret: conf.Viper.GetString("wxOfficialAccount.app_secret"),
-		Token:     conf.Viper.GetString("wxOfficialAccount.token"),
+func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
+
+	if officialAccountInstance == nil {
+		wc := InitWechat()
+		//这里本地内存保存access_token，也可选择redis，memcache或者自定cache
+
+		cfg := &config.Config{
+			AppID:     conf.Viper.GetString("wxOfficialAccount.app_id"),
+			AppSecret: conf.Viper.GetString("wxOfficialAccount.app_secret"),
+			Token:     conf.Viper.GetString("wxOfficialAccount.token"),
+		}
+
+		officialAccountInstance = wc.GetOfficialAccount(cfg)
 	}
 
-	officialAccount = wc.GetOfficialAccount(cfg)
+	officialAccount = officialAccountInstance
 
 	accessToken, _ := officialAccount.GetAccessToken()
 	log.Trace.Info("GetAccessToken ", accessToken)
@@ -270,6 +291,40 @@ func PaginatePublish(offset, count int64, noReturnContent bool) (publishList fre
 	return
 }
 
+// SendNews 群发图文消息
+func SendNews(user *broadcast.User, mediaID string, ignoreReprint bool) (sendResult *broadcast.Result, err error) {
+	officialAccount := GetOfficialAccount()
+	newBroadcast := officialAccount.GetBroadcast()
+
+	sendResult, err = newBroadcast.SendNews(user, mediaID, ignoreReprint)
+	if err != nil {
+		log.Trace.Error("SendNews error ", err.Error())
+		fmt.Println("SendNews ", err)
+		return
+	}
+
+	log.Trace.Info("SendNews ", sendResult)
+	return
+}
+
+// GetMassStatus 获取群发消息推送状态
+// SEND_SUCCESS表示发送成功，SENDING表示发送中，SEND_FAIL表示发送失败，DELETE表示已删除
+// https://developers.weixin.qq.com/doc/offiaccount/Message_Management/Batch_Sends_and_Originality_Checks.html
+func GetMassStatus(MsgID int64) (sendStatus *broadcast.Result, err error) {
+	officialAccount := GetOfficialAccount()
+	newBroadcast := officialAccount.GetBroadcast()
+
+	sendStatus, err = newBroadcast.GetMassStatus(strconv.Itoa(int(MsgID)))
+	if err != nil {
+		log.Trace.Error("GetMassStatus error ", err.Error())
+		fmt.Println("GetMassStatus ", err)
+		return
+	}
+
+	log.Trace.Info("GetMassStatus ", sendStatus)
+	return
+}
+
 type ContentImageFile struct {
 	FilePath    string // 文件路径
 	Placeholder string // 图片在文章内容中的占位符（该占位符将会替换为微信图片链接）
@@ -281,7 +336,7 @@ type Article struct {
 	CoverImageFile    string //封面图片文件，必填
 }
 
-// 综合-发布文章接口，流程示例，非最终方案
+// 综合-发布文章接口，仅发布，不推送
 func PublishArticle(articles []*Article) (publishID int64, err error) {
 
 	// 可以同时发布多篇文章
@@ -337,6 +392,67 @@ func PublishArticle(articles []*Article) (publishID int64, err error) {
 
 	// 6. 轮询监控发布状态（异步执行）
 	TriggerPublishStatusCheckEvent(publishID)
+
+	return
+}
+
+// 综合-图文消息群发，推送给所有订阅用户
+// https://developers.weixin.qq.com/doc/offiaccount/Message_Management/Batch_Sends_and_Originality_Checks.html#1
+func SendNewsArticle(articles []*Article) (sendResult *broadcast.Result, err error) {
+
+	// 可以同时发布多篇文章
+	var draftArticles []*draft.Article
+
+	for _, article := range articles {
+		draftArticle := article.DraftArticle
+
+		contentText := draftArticle.Content
+
+		// 文章中的图片文件
+		contentImageFiles := article.ContentImageFiles
+
+		for _, imgFile := range contentImageFiles {
+			// 1. 上传文章中的图片，获取图片url
+			imgUrl, erro := MediaUploadImg(imgFile.FilePath)
+			if erro != nil {
+				log.Trace.Error("MediaUploadImg ", erro)
+				return
+			}
+
+			// 2. 将文章内容中的图片替换为微信的图片链接
+			contentText = strings.Replace(contentText, imgFile.Placeholder, imgUrl, -1)
+		}
+
+		draftArticle.Content = contentText
+
+		// 3. 上传文章封面图片，获取media_id
+		coverMediaID, _, erro := MediaAddMaterial(material.MediaTypeImage, article.CoverImageFile)
+		if erro != nil {
+			log.Trace.Error("MediaAddMaterial() error = ", erro)
+			return
+		}
+
+		draftArticle.ThumbMediaID = coverMediaID
+
+		draftArticles = append(draftArticles, &draftArticle)
+	}
+
+	// 4. 新建草稿
+	draftId, err := AddDraft(draftArticles)
+	if err != nil {
+		log.Trace.Error("AddDraft() error = ", err)
+		return
+	}
+
+	// 5. 群发消息，推送给所有订阅用户
+	sendResult, err = SendNews(nil, draftId, true)
+	if err != nil {
+		log.Trace.Error("SendNews() error = ", err)
+		return
+	}
+
+	// 6. 轮询监控发布状态（异步执行）
+	TriggerSendMsgStatusCheckEvent(sendResult.MsgID)
 
 	return
 }
