@@ -9,10 +9,6 @@ import (
 	"weixin/common/util"
 )
 
-type Event interface {
-	bootstrap(c chan *WeixinEvent, f func() error)
-}
-
 type WeixinEvent struct {
 	Id int64
 	//事件尝试次数
@@ -21,28 +17,44 @@ type WeixinEvent struct {
 	T time.Time
 }
 
-type SendMsgStatusCheckEvent WeixinEvent
-type PublishStatusCheckEvent WeixinEvent
+func (e *WeixinEvent) bootstrap(weixinEventChan chan *WeixinEvent, f func() error) {
+	if err := f(); err != nil {
+		log.Trace.Error("ID:", e.Id, "attempts:", e.Attempts, " failure!!! ", err)
 
-var SendMsgStatusCheckChan chan *SendMsgStatusCheckEvent
+		// 如果失败，则重试三次
+		if e.Attempts < 3 {
+			go util.SafeGo(func() {
+				time.Sleep(time.Duration(3) * time.Second)
+				e.Attempts++
+				weixinEventChan <- e
+			})
+		}
+
+	} else {
+		log.Trace.Info("ID:", e.Id, " attempts:", e.Attempts, " done!!!")
+	}
+}
+
+// 监控群发消息推送状态
+var SendMsgStatusCheckChan chan *WeixinEvent
 
 // 监控微信文章发布状态
-var PublishStatusCheckChan chan *PublishStatusCheckEvent
+var PublishStatusCheckChan chan *WeixinEvent
 var onceE sync.Once
 
 func init() {
 	onceE.Do(func() {
-		SendMsgStatusCheckChan = make(chan *SendMsgStatusCheckEvent, 100)
-		PublishStatusCheckChan = make(chan *PublishStatusCheckEvent, 100)
+		SendMsgStatusCheckChan = make(chan *WeixinEvent, 100)
+		PublishStatusCheckChan = make(chan *WeixinEvent, 100)
 	})
 }
 
 func TriggerSendMsgStatusCheckEvent(msgID int64) {
-	SendMsgStatusCheckChan <- &SendMsgStatusCheckEvent{Id: msgID, T: time.Now()}
+	SendMsgStatusCheckChan <- &WeixinEvent{Id: msgID, T: time.Now()}
 }
 
 func TriggerPublishStatusCheckEvent(publishID int64) {
-	PublishStatusCheckChan <- &PublishStatusCheckEvent{Id: publishID, T: time.Now()}
+	PublishStatusCheckChan <- &WeixinEvent{Id: publishID, T: time.Now()}
 }
 
 // 微信任务监控
@@ -56,9 +68,9 @@ func TaskRun() {
 		select {
 		// 监控微信图文消息推送状态
 		case e := <-SendMsgStatusCheckChan:
-			e.bootstrap(func() error {
+			e.bootstrap(SendMsgStatusCheckChan, func() error {
 				// 通过 InstanceId 查询 Server 及 附加 信息，填充到 v1.Instance 结构体
-				SendStatus, err := e.SendMsgStatusCheck()
+				SendStatus, err := SendMsgStatusCheck(e)
 				if err != nil {
 					return err
 				}
@@ -69,9 +81,9 @@ func TaskRun() {
 				return nil
 			})
 		case e := <-PublishStatusCheckChan:
-			e.bootstrap(func() error {
+			e.bootstrap(PublishStatusCheckChan, func() error {
 				// 通过 InstanceId 查询 Server 及 附加 信息，填充到 v1.Instance 结构体
-				publishStatus, err := e.publishStatusCheck()
+				publishStatus, err := PublishStatusCheck(e)
 				if err != nil {
 					return err
 				}
@@ -94,25 +106,8 @@ func TaskRun() {
 	}
 }
 
-func (e *PublishStatusCheckEvent) bootstrap(f func() error) {
-	if err := f(); err != nil {
-		log.Trace.Error("ID:", e.Id, "attempts:", e.Attempts, " failure!!! ", err)
-
-		// 如果失败，则重试三次
-		if e.Attempts < 3 {
-			go util.SafeGo(func() {
-				time.Sleep(time.Duration(3) * time.Second)
-				e.Attempts++
-				PublishStatusCheckChan <- e
-			})
-		}
-
-	} else {
-		log.Trace.Info("ID:", e.Id, " attempts:", e.Attempts, " done!!!")
-	}
-}
-
-func (e *PublishStatusCheckEvent) publishStatusCheck() (publishStatus freepublish.PublishStatusList, err error) {
+// 监控微信文章发布状态
+func PublishStatusCheck(e *WeixinEvent) (publishStatus freepublish.PublishStatusList, err error) {
 	publishStatus, err = PublishStatus(e.Id)
 	if err != nil {
 		log.Trace.Error("PublishStatus() error = ", err)
@@ -139,25 +134,8 @@ func (e *PublishStatusCheckEvent) publishStatusCheck() (publishStatus freepublis
 	return
 }
 
-func (e *SendMsgStatusCheckEvent) bootstrap(f func() error) {
-	if err := f(); err != nil {
-		log.Trace.Error("ID:", e.Id, "attempts:", e.Attempts, " failure!!! ", err)
-
-		// 如果失败，则重试三次
-		if e.Attempts < 3 {
-			go util.SafeGo(func() {
-				time.Sleep(time.Duration(3) * time.Second)
-				e.Attempts++
-				SendMsgStatusCheckChan <- e
-			})
-		}
-
-	} else {
-		log.Trace.Info("ID:", e.Id, " attempts:", e.Attempts, " done!!!")
-	}
-}
-
-func (e *SendMsgStatusCheckEvent) SendMsgStatusCheck() (sendStatus *broadcast.Result, err error) {
+// 监控群发消息推送状态
+func SendMsgStatusCheck(e *WeixinEvent) (sendStatus *broadcast.Result, err error) {
 	sendStatus, err = GetMassStatus(e.Id)
 	if err != nil {
 		log.Trace.Error("GetMassStatus() error = ", err)

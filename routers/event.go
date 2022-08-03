@@ -78,8 +78,10 @@ func MessageHandler(msg *message.MixMessage) *message.Reply {
 
 func EventHandler(msg *message.MixMessage) (reply *message.Reply) {
 	switch msg.Event {
-	case message.EventPublishJobFinish: // 文章发布任务
-		//return EventHandler(msg)
+	case message.EventPublishJobFinish: // 群发消息推送通知
+		//todo 变更群发消息状态，记录发送结果
+	case message.EventMassSendJobFinish: // 文章发布任务完成通知
+		//todo 变更文章发布状态，记录发布结果
 	}
 
 	return
