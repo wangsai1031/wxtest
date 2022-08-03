@@ -57,7 +57,7 @@ func GetAccessToken() (accessToken string, err error) {
 	return officialAccount.GetAccessToken()
 }
 
-// MediaUpload 临时素材上传
+// MediaUpload 临时素材上传（暂时用不到）
 func MediaUpload(mediaType material.MediaType, filename string) (media material.Media, err error) {
 
 	officialAccount := GetOfficialAccount()
@@ -74,8 +74,9 @@ func MediaUpload(mediaType material.MediaType, filename string) (media material.
 	return
 }
 
-// ImageUpload 永久图片上传
+// MediaUploadImg 永久图片上传
 // 本接口所上传的图片不占用公众号的素材库中图片数量的100000个的限制。图片仅支持jpg/png格式，大小必须在1MB以下。
+// @link https://developers.weixin.qq.com/doc/offiaccount/Asset_Management/Adding_Permanent_Assets.html
 func MediaUploadImg(filename string) (string, error) {
 
 	officialAccount := GetOfficialAccount()
@@ -91,7 +92,8 @@ func MediaUploadImg(filename string) (string, error) {
 	return url, err
 }
 
-// AddMaterial 上传永久性素材（处理视频需要单独上传）
+// AddMaterial 上传永久性素材（用于上传文章封面图片）
+// @link https://developers.weixin.qq.com/doc/offiaccount/Asset_Management/Adding_Permanent_Assets.html
 func MediaAddMaterial(mediaType material.MediaType, filename string) (string, string, error) {
 
 	officialAccount := GetOfficialAccount()
@@ -186,6 +188,7 @@ NeedOpenComment    uint   `json:"need_open_comment"`     // 是否打开评论�
 OnlyFansCanComment uint   `json:"only_fans_can_comment"` // 是否粉丝才可评论，0所有人可评论(默认)，1粉丝才可评论
 */
 // AddDraft 新建草稿
+// @link https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html
 func AddDraft(articles []*draft.Article) (string, error) {
 	officialAccount := GetOfficialAccount()
 	newDraft := officialAccount.GetDraft()
@@ -218,6 +221,7 @@ func PaginateDraft(offset, count int64, noReturnContent bool) (articleList draft
 
 // Publish 发布接口。需要先将图文素材以草稿的形式保存（见“草稿箱/新建草稿”，
 // 如需从已保存的草稿中选择，见“草稿箱/获取草稿列表”），选择要发布的草稿 media_id 进行发布
+// https://developers.weixin.qq.com/doc/offiaccount/Publish/Publish.html
 func Publish(draftId string) (publishID int64, err error) {
 	officialAccount := GetOfficialAccount()
 	newFreePublish := officialAccount.GetFreePublish()
@@ -234,6 +238,7 @@ func Publish(draftId string) (publishID int64, err error) {
 }
 
 // PublishStatus 获取文章发布状态
+// https://developers.weixin.qq.com/doc/offiaccount/Publish/Get_status.html
 func PublishStatus(publishID int64) (publishStatus freepublish.PublishStatusList, err error) {
 	officialAccount := GetOfficialAccount()
 	newFreePublish := officialAccount.GetFreePublish()
@@ -316,6 +321,7 @@ func PublishArticle(articles []*Article) (publishID int64, err error) {
 		draftArticles = append(draftArticles, &draftArticle)
 	}
 
+	// 4. 新建草稿
 	draftId, err := AddDraft(draftArticles)
 	if err != nil {
 		log.Trace.Error("AddDraft() error = ", err)
