@@ -79,7 +79,7 @@ func MessageHandler(msg *message.MixMessage) *message.Reply {
 func EventHandler(msg *message.MixMessage) (reply *message.Reply) {
 	switch msg.Event {
 	case message.EventPublishJobFinish: // 文章发布任务
-		return EventHandler(msg)
+		//return EventHandler(msg)
 	}
 
 	return
