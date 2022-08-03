@@ -1,7 +1,6 @@
 package officialaccount
 
 import (
-	"fmt"
 	"github.com/silenceper/wechat/v2/officialaccount/freepublish"
 	"sync"
 	"time"
@@ -35,7 +34,7 @@ func TriggerPublishStatusCheckEvent(publishID int64) {
 func TaskRun() {
 	log.Trace.Info("weixin event task starting...")
 	// set ticker
-	ticker := time.NewTicker(time.Duration(10) * time.Second)
+	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for {
@@ -58,7 +57,7 @@ func TaskRun() {
 			if len(publishStatusCheckChan) == 0 {
 				// todo 从数据表中查出 发布中 状态的发布任务，添加到监测队列中
 			}
-			fmt.Println(t.Format("01-02 15:04:05") + " 微信任务监控中")
+			log.Trace.Info("微信任务监控中 ", t.Format("01-02 15:04:05"))
 		}
 	}
 }
