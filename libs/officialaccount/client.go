@@ -2,6 +2,7 @@ package officialaccount
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/silenceper/wechat/v2"
 	"github.com/silenceper/wechat/v2/cache"
@@ -11,6 +12,7 @@ import (
 	"github.com/silenceper/wechat/v2/officialaccount/draft"
 	"github.com/silenceper/wechat/v2/officialaccount/freepublish"
 	"github.com/silenceper/wechat/v2/officialaccount/material"
+	"github.com/silenceper/wechat/v2/util"
 	"strings"
 	"weixin/common/handlers/conf"
 	"weixin/common/handlers/log"
@@ -46,7 +48,7 @@ func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
 	officialAccount = wc.GetOfficialAccount(cfg)
 
 	accessToken, _ := officialAccount.GetAccessToken()
-	log.Trace.Info("GetAccessToken", accessToken)
+	log.Trace.Info("GetAccessToken ", accessToken)
 	return
 }
 
@@ -63,16 +65,17 @@ func MediaUpload(mediaType material.MediaType, filename string) (media material.
 
 	media, err = newMaterial.MediaUpload(mediaType, filename)
 	if err != nil {
-		log.Trace.Error("MediaUpload error", err.Error())
-		fmt.Println("MediaUpload", err)
+		log.Trace.Error("MediaUpload error ", err.Error())
+		fmt.Println("MediaUpload ", err)
 		return
 	}
 
-	log.Trace.Info("MediaUpload", media)
+	log.Trace.Info("MediaUpload ", media)
 	return
 }
 
 // ImageUpload 永久图片上传
+// 本接口所上传的图片不占用公众号的素材库中图片数量的100000个的限制。图片仅支持jpg/png格式，大小必须在1MB以下。
 func MediaUploadImg(filename string) (string, error) {
 
 	officialAccount := GetOfficialAccount()
@@ -80,11 +83,11 @@ func MediaUploadImg(filename string) (string, error) {
 
 	url, err := newMaterial.ImageUpload(filename)
 	if err != nil {
-		log.Trace.Error("MediaUploadImg error", err.Error())
+		log.Trace.Error("MediaUploadImg error ", err.Error())
 		return "", err
 	}
 
-	log.Trace.Info("MediaUploadImg", url)
+	log.Trace.Info("MediaUploadImg ", url)
 	return url, err
 }
 
@@ -96,11 +99,11 @@ func MediaAddMaterial(mediaType material.MediaType, filename string) (string, st
 
 	mediaID, url, err := newMaterial.AddMaterial(mediaType, filename)
 	if err != nil {
-		log.Trace.Error("MediaAddMaterial error", err.Error())
+		log.Trace.Error("MediaAddMaterial error ", err.Error())
 		return "", "", err
 	}
 
-	log.Trace.Info("MediaAddMaterial", mediaID, url)
+	log.Trace.Info("MediaAddMaterial ", mediaID, url)
 	return mediaID, url, err
 }
 
@@ -115,11 +118,11 @@ func BatchGetMaterial(permanentMaterialType material.PermanentMaterialType, offs
 	articleList, err = newMaterial.BatchGetMaterial(permanentMaterialType, offset, count)
 
 	if err != nil {
-		log.Trace.Error("GetMaterialIndex error", err.Error())
+		log.Trace.Error("GetMaterialIndex error ", err.Error())
 		return
 	}
 
-	log.Trace.Info("GetMaterialIndex", articleList)
+	log.Trace.Info("GetMaterialIndex ", articleList)
 	return
 }
 
@@ -130,6 +133,45 @@ func ClearQuota() error {
 	officialAccount := GetOfficialAccount()
 	b := basic.NewBasic(officialAccount.GetContext())
 	return b.ClearQuota()
+}
+
+type Quota struct {
+	DailyLimit int64 `json:"daily_limit"` //当天该账号可调用该接口的次数
+	Used       int64 `json:"used"`        //当天已经调用的次数
+	Remain     int64 `json:"remain"`      //当天剩余调用次数
+}
+
+type GetQuotaRes struct {
+	util.CommonError
+
+	Quota Quota `json:"quota"`
+}
+
+// GetQuota获取接口调用次数
+func GetQuota(cgiPath string) (resQuota GetQuotaRes, err error) {
+	officialAccount := GetOfficialAccount()
+	newBasic := officialAccount.GetBasic()
+	ak, err := newBasic.GetAccessToken()
+	if err != nil {
+		return
+	}
+	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/openapi/quota/get?access_token=%s", ak)
+	data, err := util.PostJSON(url, map[string]string{
+		"cgi_path": cgiPath,
+	})
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(data, &resQuota)
+	if err != nil {
+		return
+	}
+	if resQuota.ErrCode != 0 {
+		err = fmt.Errorf("GetQuota error : errcode=%v , errmsg=%v", resQuota.ErrCode, resQuota.ErrMsg)
+		return
+	}
+	return
 }
 
 /**
@@ -150,11 +192,11 @@ func AddDraft(articles []*draft.Article) (string, error) {
 
 	mediaID, err := newDraft.AddDraft(articles)
 	if err != nil {
-		log.Trace.Error("AddDraft error", err.Error())
+		log.Trace.Error("AddDraft error ", err.Error())
 		return "", err
 	}
 
-	log.Trace.Info("AddDraft", mediaID)
+	log.Trace.Info("AddDraft ", mediaID)
 	return mediaID, err
 }
 
@@ -165,12 +207,12 @@ func PaginateDraft(offset, count int64, noReturnContent bool) (articleList draft
 
 	articleList, err = newDraft.PaginateDraft(offset, count, noReturnContent)
 	if err != nil {
-		log.Trace.Error("PaginateDraft error", err.Error())
-		fmt.Println("PaginateDraft", err)
+		log.Trace.Error("PaginateDraft error ", err.Error())
+		fmt.Println("PaginateDraft ", err)
 		return
 	}
 
-	log.Trace.Info("PaginateDraft", articleList)
+	log.Trace.Info("PaginateDraft ", articleList)
 	return
 }
 
@@ -182,12 +224,12 @@ func Publish(draftId string) (publishID int64, err error) {
 
 	publishID, err = newFreePublish.Publish(draftId)
 	if err != nil {
-		log.Trace.Error("Publish error", err.Error())
-		fmt.Println("Publish", err)
+		log.Trace.Error("Publish error ", err.Error())
+		fmt.Println("Publish ", err)
 		return
 	}
 
-	log.Trace.Info("Publish", publishID)
+	log.Trace.Info("Publish ", publishID)
 	return
 }
 
@@ -198,12 +240,12 @@ func PublishStatus(publishID int64) (publishStatus freepublish.PublishStatusList
 
 	publishStatus, err = newFreePublish.SelectStatus(publishID)
 	if err != nil {
-		log.Trace.Error("PublishStatus error", err.Error())
-		fmt.Println("PublishStatus", err)
+		log.Trace.Error("PublishStatus error ", err.Error())
+		fmt.Println("PublishStatus ", err)
 		return
 	}
 
-	log.Trace.Info("PublishStatus", publishStatus)
+	log.Trace.Info("PublishStatus ", publishStatus)
 	return
 }
 
@@ -214,12 +256,12 @@ func PaginatePublish(offset, count int64, noReturnContent bool) (publishList fre
 
 	publishList, err = newFreePublish.Paginate(offset, count, noReturnContent)
 	if err != nil {
-		log.Trace.Error("PaginatePublish error", err.Error())
-		fmt.Println("PaginatePublish", err)
+		log.Trace.Error("PaginatePublish error ", err.Error())
+		fmt.Println("PaginatePublish ", err)
 		return
 	}
 
-	log.Trace.Info("PaginatePublish", publishList)
+	log.Trace.Info("PaginatePublish ", publishList)
 	return
 }
 
@@ -229,19 +271,19 @@ type ContentImageFile struct {
 }
 
 type Article struct {
-	draftArticle      draft.Article
+	DraftArticle      draft.Article
 	ContentImageFiles []*ContentImageFile
-	CoverImageFile    string
+	CoverImageFile    string //封面图片文件，必填
 }
 
 // 综合-发布文章接口，流程示例，非最终方案
-func PublishArticle(articles []*Article) {
+func PublishArticle(articles []*Article) (publishID int64, err error) {
 
 	// 可以同时发布多篇文章
 	var draftArticles []*draft.Article
 
 	for _, article := range articles {
-		draftArticle := article.draftArticle
+		draftArticle := article.DraftArticle
 
 		contentText := draftArticle.Content
 
@@ -250,27 +292,26 @@ func PublishArticle(articles []*Article) {
 
 		for _, imgFile := range contentImageFiles {
 			// 1. 上传文章中的图片，获取图片url
-			imgUrl, err := MediaUploadImg(imgFile.FilePath)
-			if err != nil {
-				log.Trace.Error("MediaUploadImg", err)
+			imgUrl, erro := MediaUploadImg(imgFile.FilePath)
+			if erro != nil {
+				log.Trace.Error("MediaUploadImg ", erro)
 				return
 			}
+
 			// 2. 将文章内容中的图片替换为微信的图片链接
 			contentText = strings.Replace(contentText, imgFile.Placeholder, imgUrl, -1)
 		}
 
 		draftArticle.Content = contentText
 
-		if article.CoverImageFile != "" && draftArticle.ShowCoverPic == 1 {
-			// 3. 上传文章封面图片，获取media_id
-			coverMediaID, _, err := MediaAddMaterial(material.MediaTypeImage, article.CoverImageFile)
-			if err != nil {
-				log.Trace.Error("MediaAddMaterial() error = ", err)
-				return
-			}
-
-			draftArticle.ThumbMediaID = coverMediaID
+		// 3. 上传文章封面图片，获取media_id
+		coverMediaID, _, erro := MediaAddMaterial(material.MediaTypeImage, article.CoverImageFile)
+		if erro != nil {
+			log.Trace.Error("MediaAddMaterial() error = ", erro)
+			return
 		}
+
+		draftArticle.ThumbMediaID = coverMediaID
 
 		draftArticles = append(draftArticles, &draftArticle)
 	}
@@ -282,7 +323,7 @@ func PublishArticle(articles []*Article) {
 	}
 
 	// 5. 发布文章
-	publishID, err := Publish(draftId)
+	publishID, err = Publish(draftId)
 	if err != nil {
 		log.Trace.Error("Publish() error = ", err)
 		return

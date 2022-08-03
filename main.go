@@ -29,14 +29,10 @@ func init() {
 }
 
 func main() {
-
 	// context init
 	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
 	// 监控微信任务
-	go util.SafeGo(func() {
-		officialaccount.TaskRun(ctx)
-	})
+	go util.SafeGo(officialaccount.TaskRun)
 
 	// gin
 	r := gin.Default()
@@ -46,9 +42,6 @@ func main() {
 
 	if err := r.Run(addr); err != nil {
 		log.Trace.Fatalf(ctx, trace.DLTagUndefined, "gin Run err %v \n", err)
-		cancel()
 		os.Exit(1)
 	}
-
-	cancel()
 }

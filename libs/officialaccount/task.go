@@ -1,7 +1,6 @@
 package officialaccount
 
 import (
-	"context"
 	"fmt"
 	"github.com/silenceper/wechat/v2/officialaccount/freepublish"
 	"sync"
@@ -33,8 +32,7 @@ func TriggerPublishStatusCheckEvent(publishID int64) {
 }
 
 // 微信任务监控
-func TaskRun(ctx context.Context) {
-
+func TaskRun() {
 	log.Trace.Info("weixin event task starting...")
 	// set ticker
 	ticker := time.NewTicker(time.Duration(10) * time.Second)
@@ -42,9 +40,6 @@ func TaskRun(ctx context.Context) {
 
 	for {
 		select {
-		case <-ctx.Done():
-			log.Trace.Info("weixin event task stoped")
-			return
 		// 监控微信文章发布状态
 		case e := <-publishStatusCheckChan:
 			e.bootstrap(func() error {
@@ -82,7 +77,7 @@ func (e *PublishStatusCheckEvent) bootstrap(f func() error) {
 		}
 
 	} else {
-		log.Trace.Info("publishID:", e.publishID, "attempts:", e.Attempts, " done!!!")
+		log.Trace.Info("publishID:", e.publishID, " attempts:", e.Attempts, " done!!!")
 	}
 
 }
