@@ -50,16 +50,12 @@ func InitWechat() *wechat.Wechat {
 	return wc
 }
 
+var once sync.Once
 var officialAccountInstance *officialaccount.OfficialAccount
 
-var locker sync.Mutex
-
 func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
-
-	locker.Lock()
-	defer locker.Unlock()
-
-	if officialAccountInstance == nil {
+	// 使用once.Do可以确保 ins 实例全局只被创建一次，once.Do 函数还可以确保当同时有多个创建动作时，只有一个创建动作在被执行
+	once.Do(func() {
 		wc := InitWechat()
 		//这里本地内存保存access_token，也可选择redis，memcache或者自定cache
 
@@ -73,10 +69,9 @@ func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
 
 		accessToken, _ := officialAccountInstance.GetAccessToken()
 		log.Trace.Info("GetAccessToken ", accessToken)
-	}
+	})
 
 	officialAccount = officialAccountInstance
-
 	return
 }
 
