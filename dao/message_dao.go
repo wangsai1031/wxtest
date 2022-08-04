@@ -38,11 +38,14 @@ func (d MessageDao) Save(ctx context.Context, msg *message.MixMessage) (err erro
 
 	if err != nil {
 		log.Trace.Errorf(ctx, trace.DLTagUndefined, "微信异步通知解析异常 err: %v, msg: %+v", err, msg)
+		entity.Resource = "{}"
 	} else {
 		entity.Resource = string(resourceByte)
 	}
 
-	err = d.Create(ctx, entity)
+	tx := d.getDb(ctx).Debug()
+	dbResult := tx.Create(&entity)
+	err = dbResult.Error
 
 	if err != nil {
 		log.Trace.Errorf(ctx, trace.DLTagUndefined, "微信异步通知保存失败 err: %v, msg: %+v", err, msg)
