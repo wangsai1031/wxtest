@@ -1,14 +1,16 @@
 package routers
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/silenceper/wechat/v2/officialaccount/message"
 	"weixin/common/handlers/log"
 	"weixin/common/util"
+	"weixin/dao"
 	"weixin/libs/officialaccount"
 )
 
-func LoadEvent(r *gin.Engine) {
+func LoadNotify(r *gin.Engine) {
 	r.Any("/event", ServeWechat)
 }
 
@@ -22,7 +24,9 @@ func ServeWechat(c *gin.Context) {
 	server := officialAccount.GetServer(c.Request, c.Writer)
 	server.SkipValidate(true)
 	//设置接收消息的处理方法
-	server.SetMessageHandler(MessageHandler)
+	server.SetMessageHandler(func(mixMessage *message.MixMessage) *message.Reply {
+		return MessageHandler(c, mixMessage)
+	})
 
 	//处理消息接收以及回复
 	err := server.Serve()
@@ -38,13 +42,18 @@ func ServeWechat(c *gin.Context) {
 	}
 }
 
-func MessageHandler(msg *message.MixMessage) *message.Reply {
+func MessageHandler(ctx context.Context, msg *message.MixMessage) *message.Reply {
 	log.Trace.Info("MessageHandler ", msg)
+
+	// 保存通知信息到数据库
+	go util.SafeGo(func() {
+		dao.MessageDaoInstance.Save(ctx, msg)
+	})
 
 	switch msg.MsgType {
 
 	case message.MsgTypeEvent:
-		return EventHandler(msg)
+		return EventHandler(ctx, msg)
 	case message.MsgTypeText:
 
 	case message.MsgTypeImage:
@@ -76,7 +85,7 @@ func MessageHandler(msg *message.MixMessage) *message.Reply {
 	//return &message.Reply{MsgType: message.MsgTypeTransfer, MsgData: transferCustomer}
 }
 
-func EventHandler(msg *message.MixMessage) (reply *message.Reply) {
+func EventHandler(ctx context.Context, msg *message.MixMessage) (reply *message.Reply) {
 	switch msg.Event {
 	case message.EventPublishJobFinish: // 群发消息推送通知
 		//todo 变更群发消息状态，记录发送结果

@@ -35,7 +35,7 @@ const (
 func InitWechat() *wechat.Wechat {
 	wc := wechat.NewWechat()
 	redisOpts := &cache.RedisOpts{
-		Host:        conf.Viper.GetString("redis.host"),
+		Host:        conf.Viper.GetString("redis.host") + ":" + conf.Viper.GetString("redis.port"),
 		Password:    conf.Viper.GetString("redis.password"),
 		Database:    conf.Viper.GetInt("redis.database"),
 		MaxActive:   conf.Viper.GetInt("redis.max_active"),

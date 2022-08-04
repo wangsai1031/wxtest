@@ -9,6 +9,8 @@ import (
 	"team.wphr.vip/technology-group/infrastructure/trace"
 	"weixin/common/handlers/conf"
 	"weixin/common/handlers/log"
+	"weixin/common/handlers/mysql"
+	"weixin/common/handlers/redis"
 	"weixin/common/util"
 	"weixin/libs/officialaccount"
 	"weixin/routers"
@@ -26,6 +28,8 @@ func init() {
 	conf.InitConf(confPath)
 
 	log.Init()
+	mysql.Init()
+	redis.Init()
 }
 
 func main() {
@@ -36,7 +40,7 @@ func main() {
 
 	// gin
 	r := gin.Default()
-	routers.LoadEvent(r)
+	routers.LoadNotify(r)
 
 	addr := conf.Viper.GetString("http.addr")
 

@@ -2,9 +2,20 @@
 # 监听本地的端口
 addr = ":8000"
 
+
+[mysql]
+# user:password@(host:port)/database?timeout=1000ms&charset=utf8mb4,utf8&parseTime=true&loc=Local
+dsn = "root:rds_xdyj_rds@(192.168.1.200:3306)/xdyj_weixin_service?timeout=1000ms&charset=utf8mb4,utf8&parseTime=true&loc=Local"
+
+conn_max_lifetime = 120
+max_idle_conns = 20
+max_open_conns = 20
+
 # 使用redis来存放access_token
 [redis]
-host = "192.168.1.200:6379"
+host = "192.168.1.200"
+port = "6379"
+password = ""
 
 # 微信公众号相关配置
 [wxOfficialAccount]
