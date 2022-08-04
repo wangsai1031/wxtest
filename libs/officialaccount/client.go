@@ -16,6 +16,7 @@ import (
 	"github.com/silenceper/wechat/v2/util"
 	"strconv"
 	"strings"
+	"sync"
 	"weixin/common/handlers/conf"
 	"weixin/common/handlers/log"
 )
@@ -51,7 +52,12 @@ func InitWechat() *wechat.Wechat {
 
 var officialAccountInstance *officialaccount.OfficialAccount
 
+var locker sync.Mutex
+
 func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
+
+	locker.Lock()
+	defer locker.Unlock()
 
 	if officialAccountInstance == nil {
 		wc := InitWechat()
@@ -64,12 +70,13 @@ func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
 		}
 
 		officialAccountInstance = wc.GetOfficialAccount(cfg)
+
+		accessToken, _ := officialAccountInstance.GetAccessToken()
+		log.Trace.Info("GetAccessToken ", accessToken)
 	}
 
 	officialAccount = officialAccountInstance
 
-	accessToken, _ := officialAccount.GetAccessToken()
-	log.Trace.Info("GetAccessToken ", accessToken)
 	return
 }
 

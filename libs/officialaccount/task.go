@@ -24,7 +24,7 @@ func (e *WeixinEvent) bootstrap(weixinEventChan chan *WeixinEvent, f func() erro
 		// 如果失败，则重试三次
 		if e.Attempts < 3 {
 			go util.SafeGo(func() {
-				time.Sleep(time.Duration(3) * time.Second)
+				time.Sleep(time.Duration(10) * time.Second)
 				e.Attempts++
 				weixinEventChan <- e
 			})
@@ -114,10 +114,10 @@ func PublishStatusCheck(e *WeixinEvent) (publishStatus freepublish.PublishStatus
 		return
 	}
 
-	// 发布中，1秒后放回队列
+	// 发布中，3秒后放回队列
 	if publishStatus.PublishStatus == freepublish.PublishStatusPublishing {
 		util.SafeGo(func() {
-			time.Sleep(time.Duration(1) * time.Second)
+			time.Sleep(time.Duration(3) * time.Second)
 			PublishStatusCheckChan <- e
 		})
 
@@ -142,10 +142,10 @@ func SendMsgStatusCheck(e *WeixinEvent) (sendStatus *broadcast.Result, err error
 		return
 	}
 
-	// 发布中，1秒后放回队列
+	// 发布中，3秒后放回队列
 	if sendStatus.MsgStatus == string(SendMsgStatusSending) {
 		util.SafeGo(func() {
-			time.Sleep(time.Duration(1) * time.Second)
+			time.Sleep(time.Duration(3) * time.Second)
 			SendMsgStatusCheckChan <- e
 		})
 

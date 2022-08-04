@@ -431,7 +431,7 @@ func TestSendNews(t *testing.T) {
 		name string
 		args args
 	}{
-		{"test1", args{user: nil, mediaID: "HEIhl0HtYZrgMLz4_jBrzkBEie1iIiN8mGfNXabEMt4zOtGrUJg-uhF5fQYPO8cc", ignoreReprint: true}},
+		{"test1", args{user: nil, mediaID: "HEIhl0HtYZrgMLz4_jBrzppdTyQQdYsZjBrAZp-8avmkZ2C6gEuRV9DmNNJSeLoR", ignoreReprint: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -458,7 +458,7 @@ func TestGetMassStatus(t *testing.T) {
 		name string
 		args args
 	}{
-		{"test1", args{1000000002}},
+		{"test1", args{1000000004}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
