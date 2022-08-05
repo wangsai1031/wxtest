@@ -7,7 +7,6 @@ import (
 	"fmt"
 	server2 "github.com/silenceper/wechat/v2/officialaccount/server"
 	"io/ioutil"
-	"net/http"
 	"reflect"
 	"runtime/debug"
 	"strconv"
@@ -25,9 +24,6 @@ import (
 // Server struct
 type Server struct {
 	*server2.Server
-	*context.Context
-	Writer  http.ResponseWriter
-	Request *http.Request
 
 	skipValidate bool
 
@@ -51,7 +47,6 @@ type Server struct {
 func NewServer(context *context.Context) *Server {
 	srv := new(Server)
 	srv.Context = context
-	srv.Server = server2.NewServer(context)
 	return srv
 }
 
