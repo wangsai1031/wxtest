@@ -5,7 +5,9 @@ go 1.16
 require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/silenceper/wechat/v2 v2.1.3
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/viper v1.12.0
+	github.com/tidwall/gjson v1.14.1
 	gorm.io/driver/mysql v1.3.5 // indirect
 	gorm.io/gorm v1.23.8
 	team.wphr.vip/technology-group/infrastructure/logger v0.0.4

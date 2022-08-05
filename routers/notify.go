@@ -3,11 +3,15 @@ package routers
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/silenceper/wechat/v2/officialaccount"
 	"github.com/silenceper/wechat/v2/officialaccount/message"
+	"net/http"
 	"weixin/common/handlers/log"
 	"weixin/common/util"
 	"weixin/dao"
-	"weixin/libs/officialaccount"
+	officialaccount2 "weixin/libs/officialaccount"
+	message2 "weixin/libs/officialaccount/message"
+	"weixin/libs/officialaccount/server"
 )
 
 func LoadNotify(r *gin.Engine) {
@@ -19,30 +23,39 @@ func ServeWechat(c *gin.Context) {
 	requestInput, _ := util.GinRequestInputs(c)
 	log.Trace.Info("ServeWechat", requestInput)
 
-	officialAccount := officialaccount.GetOfficialAccount()
+	officialAccount := officialaccount2.GetOfficialAccount()
 	// 传入request和responseWriter
-	server := officialAccount.GetServer(c.Request, c.Writer)
-	server.SkipValidate(true)
+	srv := GetServer(officialAccount, c.Request, c.Writer)
+	srv.SkipValidate(true)
 	//设置接收消息的处理方法
-	server.SetMessageHandler(func(mixMessage *message.MixMessage) *message.Reply {
+	srv.SetMessageHandler(func(mixMessage *message2.MixMessage) *message.Reply {
 		return MessageHandler(c, mixMessage)
 	})
 
 	//处理消息接收以及回复
-	err := server.Serve()
+	err := srv.Serve()
 	if err != nil {
 		log.Trace.Error("Serve Error, err= ", err)
 		return
 	}
 	//发送回复的消息
-	err = server.Send()
+	err = srv.Send()
 	if err != nil {
 		log.Trace.Error("Send Error, err= ", err)
 		return
 	}
 }
 
-func MessageHandler(ctx context.Context, msg *message.MixMessage) *message.Reply {
+// GetServer 消息管理：接收事件，被动回复消息管理
+func GetServer(officialAccount *officialaccount.OfficialAccount, req *http.Request, writer http.ResponseWriter) *server.Server {
+	srv := new(server.Server)
+	srv.Context = officialAccount.GetContext()
+	srv.Request = req
+	srv.Writer = writer
+	return srv
+}
+
+func MessageHandler(ctx context.Context, msg *message2.MixMessage) *message.Reply {
 	log.Trace.Info("MessageHandler ", msg)
 
 	// 保存通知信息到数据库
@@ -85,7 +98,7 @@ func MessageHandler(ctx context.Context, msg *message.MixMessage) *message.Reply
 	//return &message.Reply{MsgType: message.MsgTypeTransfer, MsgData: transferCustomer}
 }
 
-func EventHandler(ctx context.Context, msg *message.MixMessage) (reply *message.Reply) {
+func EventHandler(ctx context.Context, msg *message2.MixMessage) (reply *message.Reply) {
 	switch msg.Event {
 	case message.EventPublishJobFinish: // 群发消息推送通知
 		//todo 变更群发消息状态，记录发送结果

@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/silenceper/wechat/v2/officialaccount/message"
 	"gorm.io/gorm"
 	"team.wphr.vip/technology-group/infrastructure/trace"
 	"weixin/common/handlers/log"
 	"weixin/common/util"
+	message2 "weixin/libs/officialaccount/message"
 	"weixin/model"
 )
 
@@ -24,7 +24,7 @@ var MessageDaoInstance = &MessageDao{
 	},
 }
 
-func (d MessageDao) Save(ctx context.Context, msg *message.MixMessage) (err error) {
+func (d MessageDao) Save(ctx context.Context, msg *message2.MixMessage) (err error) {
 
 	entity := model.MessageEntity{
 		ToUserName:   string(msg.ToUserName),
