@@ -1,0 +1,69 @@
+syntax = "proto3";
+package WeixinService;
+option go_package = "proto";
+
+import "google/api/annotations.proto";
+import "xdrpc/sdk.proto";
+import "basic_api.proto";
+import "news.proto";
+
+//服务对外错误码, 会同步至idl/error/error.go文件中，E_ErrOk 和 E_DEFAULT_ERROR 不要删，会影响框架正常功能，错误码的值可以改
+enum ErrCode {
+	E_ErrOk         = 0;     //成功
+	E_DEFAULT_ERROR = 99999; //系统错误
+
+	E_FORBIDDEN                = 403;   //没有权限
+
+	E_PARAM_ERROR              = 10400; //参数错误
+	E_TOKEN_ERROR              = 10401; //token 错误
+
+	E_DOWN_STREAM_RETURN_ERROR = 10001; //调用下游错误
+	E_GET_DATA_ERROR           = 10002; //获取数据异常
+	E_INSERT_ERROR             = 10003; //数据入库失败
+
+	// 文件错误
+	E_UPLOAD_FILE_ERROR        = 20001; //文件上传错误
+
+}
+
+message PingReq {
+	string name = 1; //姓名
+}
+
+//Ping返回
+message PingRsp {
+  int64 errno  = 1; //错误码
+	string errmsg = 2; //错误信息
+	string data   = 3; //返回值
+}
+
+//WeixinService服务
+service WeixinService {
+
+	option (sdk.service_opt) = {
+		// 版本号，按照语义化版本管理维护，如果proto文件有更新需要同步更新版本号
+		version: "0.0.1"
+		servName: "weixin-service"
+		// 服务级别超时时间，单位毫秒
+		timeoutMsec: 1000
+		// 服务级别接口重试次数
+		retry: 2
+		// 线上的服务地址域名，需要自行替换，线下测试时用户可传入线下地址到sdk覆盖这个地址
+		target: "xxx.vanhr.net"
+	};
+
+	//Ping接口
+	rpc Ping ( PingReq ) returns ( PingRsp ) {
+		option (google.api.http) = {
+			get: "/ping"
+		};
+	}
+
+	//群发文章消息
+	rpc SendNews ( SendNewsReq ) returns ( SendNewsResp ) {
+		option (google.api.http) = {
+			post: "/news/send"
+		};
+	}
+
+}

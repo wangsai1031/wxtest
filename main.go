@@ -4,16 +4,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"os"
 	"team.wphr.vip/technology-group/infrastructure/trace"
 	"weixin/common/handlers/conf"
 	"weixin/common/handlers/log"
 	"weixin/common/handlers/mysql"
 	"weixin/common/handlers/redis"
+	"weixin/common/server/grpcserv"
+	"weixin/common/server/httpserv"
 	"weixin/common/util"
 	"weixin/libs/officialaccount"
-	"weixin/routers"
 )
 
 var (
@@ -33,19 +33,13 @@ func init() {
 }
 
 func main() {
-	// context init
-	ctx := context.Background()
 	// 监控微信任务
 	go util.SafeGo(officialaccount.TaskRun)
+	go util.SafeGo(httpserv.Run)
 
-	// gin
-	r := gin.Default()
-	routers.LoadNotify(r)
-
-	addr := conf.Viper.GetString("http.addr")
-
-	if err := r.Run(addr); err != nil {
-		log.Trace.Fatalf(ctx, trace.DLTagUndefined, "gin Run err %v \n", err)
+	// 启动服务
+	if err := grpcserv.Run(); err != nil {
+		log.Trace.Fatalf(context.Background(), trace.DLTagUndefined, "grpcserver Run err %v \n", err)
 		os.Exit(1)
 	}
 }

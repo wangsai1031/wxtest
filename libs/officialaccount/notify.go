@@ -1,39 +1,30 @@
-package routers
+package officialaccount
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
 	"github.com/silenceper/wechat/v2/officialaccount"
 	"github.com/silenceper/wechat/v2/officialaccount/message"
 	"net/http"
 	"weixin/common/handlers/log"
 	"weixin/common/util"
 	"weixin/dao"
-	officialaccount2 "weixin/libs/officialaccount"
 	message2 "weixin/libs/officialaccount/message"
 	"weixin/libs/officialaccount/server"
 )
 
-func LoadNotify(r *gin.Engine) {
-	r.Any("/event", ServeWechat)
-}
-
 //ServeWechat 处理消息
-func ServeWechat(c *gin.Context) {
-	requestInput, _ := util.GinRequestInputs(c)
-	log.Trace.Info("ServeWechat", requestInput)
-
-	officialAccount := officialaccount2.GetOfficialAccount()
+func ServeWechat(rw http.ResponseWriter, req *http.Request) {
+	officialAccount := GetOfficialAccount()
 	// 传入request和responseWriter
-	srv := GetServer(officialAccount, c.Request, c.Writer)
+	srv := GetServer(officialAccount, req, rw)
 	srv.SkipValidate(true)
 	//设置接收消息的处理方法
 	srv.SetMessageHandler(func(mixMessage *message2.MixMessage) *message.Reply {
 		// 保存通知信息到数据库
 		go util.SafeGo(func() {
-			dao.MessageDaoInstance.Save(c, mixMessage, string(srv.RequestRawXMLMsg))
+			dao.MessageDaoInstance.Save(req.Context(), mixMessage, string(srv.RequestRawXMLMsg))
 		})
-		return MessageHandler(c, mixMessage)
+		return MessageHandler(req.Context(), mixMessage)
 	})
 
 	//处理消息接收以及回复

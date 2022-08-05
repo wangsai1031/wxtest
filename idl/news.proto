@@ -1,0 +1,31 @@
+syntax = "proto3";
+package WeixinService;
+option go_package = "proto";
+
+import "validate/validate.proto";
+
+//任务列表
+message SendNewsReq {
+  repeated Article articles = 1; //文章列表
+}
+
+message Article {
+  string title                = 1; //标题
+  string author               = 2; //作者名称
+  string digest               = 3; //图文消息的摘要
+  string content              = 4; //图文消息的具体内容，支持HTML标签，必须少于2万字符，小于1M，且去除JS
+  string content_source_url   = 5; //图文消息的原文地址，即点击“阅读原文”后的URL
+  string cover                = 6; //图文消息的封面图片
+  int64 need_open_comment     = 7; //是否打开评论，0不打开(默认)，1打开
+  int64 only_fans_can_comment = 8; //是否粉丝才可评论，0所有人可评论(默认)，1粉丝才可评论
+}
+
+message SendNewsResp {
+  int64  errno               = 1; //错误码
+  string errmsg              = 2; //错误信息
+  repeated SendNewsData data = 3; //群发消息信息
+}
+
+message SendNewsData {
+  int64 msg_id = 1; //群发消息id
+}

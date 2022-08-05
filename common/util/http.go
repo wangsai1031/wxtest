@@ -2,12 +2,66 @@ package util
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
+
+	"team.wphr.vip/technology-group/infrastructure/trace"
 )
+
+var httpHeaderKey = ctxKey{"http_header"}
+
+func SetHttpHeaderToCtx(ctx context.Context, headerStr string) context.Context {
+	if headerStr == "" {
+		return ctx
+	}
+
+	header := http.Header{}
+	// TODO ASCII转义处理
+	err := json.Unmarshal([]byte(headerStr), &header)
+	if err != nil {
+		return ctx
+	}
+
+	return context.WithValue(ctx, httpHeaderKey, header)
+}
+
+func GetHttpHeader(ctx context.Context, key string) string {
+	header, ok := ctx.Value(httpHeaderKey).(http.Header)
+	if !ok {
+		return ""
+	}
+
+	return header.Get(key)
+}
+
+func GetHttpQueryParam(ctx context.Context, key string) string {
+	t, _ := trace.GetCtxTrace(ctx)
+	if t == nil {
+		return ""
+	}
+
+	values, err := url.ParseQuery(t.Params)
+	if err != nil {
+		return ""
+	}
+
+	return values.Get(key)
+}
+
+// 路由
+func GetURI(ctx context.Context) string {
+	t, _ := trace.GetCtxTrace(ctx)
+	if t == nil {
+		return ""
+	}
+	return strings.ToLower(t.URL)
+}
 
 // GinRequestInputs 获取所有参数
 func GinRequestInputs(c *gin.Context) (map[string]interface{}, error) {

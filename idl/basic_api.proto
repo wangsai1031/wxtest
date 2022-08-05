@@ -1,0 +1,11 @@
+syntax = "proto3";
+package WeixinService;
+option go_package = "proto";
+
+message BasicReq {
+}
+
+message BasicResp {
+  int64 errno   = 1; //错误码
+  string errmsg = 2; //错误消息
+}
