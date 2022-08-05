@@ -12,7 +12,7 @@ import (
 	"weixin/libs/officialaccount/server"
 )
 
-//ServeWechat 处理消息
+//ServeWechat 处理微信消息通知
 func ServeWechat(rw http.ResponseWriter, req *http.Request) {
 	officialAccount := GetOfficialAccount()
 	// 传入request和responseWriter

@@ -1,12 +1,28 @@
-[http]
-# 监听本地的端口
-addr = ":8000"
+[rpc]
+# grpc server地址
+grpc_addr = ":8001"
+
+# http server地址
+http_addr = ":8000"
+
+# Grpc Handler timeout(ms), default 5000
+grpc_handler_timeout = 50000
+
+# Recieve http request timeout(ms), including the body, default 5000
+http_read_timeout = 50000
+
+# Keep-alive timeout(ms), default 60000
+http_idle_timeout = 60000
+
+# grpc Keep-alive timeout(ms), default 60000
+grpc_idle_timeout = 60000
 
 
 [mysql]
 # user:password@(host:port)/database?timeout=1000ms&charset=utf8mb4,utf8&parseTime=true&loc=Local
 dsn = "root:rds_xdyj_rds@(192.168.1.200:3306)/xdyj_weixin_service?timeout=1000ms&charset=utf8mb4,utf8&parseTime=true&loc=Local"
 
+# conn_max_lifetime <= 0 时代表connection会被一直使用
 conn_max_lifetime = 120
 max_idle_conns = 20
 max_open_conns = 20

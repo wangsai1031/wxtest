@@ -6,6 +6,7 @@ import (
 	"weixin/common/server/httpserv"
 	"weixin/controller"
 	"weixin/idl/proto"
+	"weixin/libs/officialaccount"
 	grpcMiddleware "weixin/middleware/grpc"
 
 	httpMiddleware "weixin/middleware/http"
@@ -74,8 +75,8 @@ func Run() error {
 	//     w.Write([]byte("test"))
 	// })
 
-	// 上传封面
-	//svr.AddHTTPHandleFunc("/api/cover/upload", controller.ArticleController{}.UploadArticleCover)
+	// 处理微信消息通知
+	svr.AddHTTPHandleFunc("/event", officialaccount.ServeWechat)
 
 	return svr.Run()
 }

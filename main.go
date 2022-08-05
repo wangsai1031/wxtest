@@ -11,7 +11,6 @@ import (
 	"weixin/common/handlers/mysql"
 	"weixin/common/handlers/redis"
 	"weixin/common/server/grpcserv"
-	"weixin/common/server/httpserv"
 	"weixin/common/util"
 	"weixin/libs/officialaccount"
 )
@@ -35,11 +34,10 @@ func init() {
 func main() {
 	// 监控微信任务
 	go util.SafeGo(officialaccount.TaskRun)
-	go util.SafeGo(httpserv.Run)
 
 	// 启动服务
 	if err := grpcserv.Run(); err != nil {
-		log.Trace.Fatalf(context.Background(), trace.DLTagUndefined, "grpcserver Run err %v \n", err)
+		log.Trace.Fatalf(context.Background(), trace.DLTagUndefined, "grpc server Run err %v \n", err)
 		os.Exit(1)
 	}
 }
