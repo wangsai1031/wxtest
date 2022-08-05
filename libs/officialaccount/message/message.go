@@ -10,7 +10,6 @@ import (
 
 // MixMessage 存放所有微信发送过来的消息和事件
 type MixMessage struct {
-	message.MixMessage
 	CommonToken
 
 	// 基本消息
@@ -144,6 +143,11 @@ type SubscribeMsgPopupEvent struct {
 	TemplateID            string `xml:"TemplateId" json:"TemplateId"`
 	SubscribeStatusString string `xml:"SubscribeStatusString" json:"SubscribeStatusString"`
 	PopupScene            int    `xml:"PopupScene" json:"PopupScene,string"`
+}
+
+// SetSubscribeMsgPopupEvents 设置订阅消息事件
+func (s *MixMessage) SetSubscribeMsgPopupEvents(list []SubscribeMsgPopupEvent) {
+	s.subscribeMsgPopupEventList = list
 }
 
 // GetSubscribeMsgPopupEvents 获取订阅消息事件数据

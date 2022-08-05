@@ -46,7 +46,7 @@ type Server struct {
 // NewServer init
 func NewServer(context *context.Context) *Server {
 	srv := new(Server)
-	srv.Context = context
+	srv.Server = server2.NewServer(context)
 	return srv
 }
 
@@ -167,8 +167,8 @@ func (srv *Server) getMessage() (interface{}, error) {
 	return srv.parseRequestMessage(rawXMLMsgBytes)
 }
 
-func (srv *Server) getEncryptBody() (*message.EncryptedXMLMsg, error) {
-	var encryptedXMLMsg = &message.EncryptedXMLMsg{}
+func (srv *Server) getEncryptBody() (*message2.EncryptedXMLMsg, error) {
+	var encryptedXMLMsg = &message2.EncryptedXMLMsg{}
 	if srv.isJSONContent {
 		if err := json.NewDecoder(srv.Request.Body).Decode(encryptedXMLMsg); err != nil {
 			return nil, fmt.Errorf("从body中解析json失败,err=%v", err)
@@ -196,13 +196,13 @@ func (srv *Server) parseRequestMessage(rawXMLMsgBytes []byte) (msg *message2.Mix
 	if msg.MsgType == message.MsgTypeEvent {
 		listData := gjson.Get(string(rawXMLMsgBytes), "List")
 		if listData.IsObject() {
-			listItem := message.SubscribeMsgPopupEvent{}
+			listItem := message2.SubscribeMsgPopupEvent{}
 			if parseErr := json.Unmarshal([]byte(listData.Raw), &listItem); parseErr != nil {
 				return msg, parseErr
 			}
-			msg.SetSubscribeMsgPopupEvents([]message.SubscribeMsgPopupEvent{listItem})
+			msg.SetSubscribeMsgPopupEvents([]message2.SubscribeMsgPopupEvent{listItem})
 		} else if listData.IsArray() {
-			listItems := make([]message.SubscribeMsgPopupEvent, 0)
+			listItems := make([]message2.SubscribeMsgPopupEvent, 0)
 			if parseErr := json.Unmarshal([]byte(listData.Raw), &listItems); parseErr != nil {
 				return msg, parseErr
 			}
@@ -282,7 +282,7 @@ func (srv *Server) Send() (err error) {
 		timestamp := srv.timestamp
 		timestampStr := strconv.FormatInt(timestamp, 10)
 		msgSignature := util.Signature(srv.Token, timestampStr, srv.nonce, string(encryptedMsg))
-		replyMsg = message.ResponseEncryptedXMLMsg{
+		replyMsg = message2.ResponseEncryptedXMLMsg{
 			EncryptedMsg: string(encryptedMsg),
 			MsgSignature: msgSignature,
 			Timestamp:    timestamp,
