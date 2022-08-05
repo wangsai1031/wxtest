@@ -24,7 +24,7 @@ import (
 
 // Server struct
 type Server struct {
-	*server2.Server
+	server2.Server
 	*context.Context
 	Writer  http.ResponseWriter
 	Request *http.Request

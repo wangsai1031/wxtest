@@ -10,7 +10,7 @@ import (
 
 // MixMessage 存放所有微信发送过来的消息和事件
 type MixMessage struct {
-	*message.MixMessage
+	message.MixMessage
 	CommonToken
 
 	// 基本消息
