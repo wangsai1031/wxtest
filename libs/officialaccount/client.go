@@ -66,10 +66,10 @@ func GetOfficialAccount() (officialAccount *officialaccount.OfficialAccount) {
 		}
 
 		officialAccountInstance = wc.GetOfficialAccount(cfg)
-
-		accessToken, _ := officialAccountInstance.GetAccessToken()
-		log.Trace.Info("GetAccessToken ", accessToken)
 	})
+
+	accessToken, _ := officialAccountInstance.GetAccessToken()
+	log.Trace.Info("GetAccessToken ", accessToken)
 
 	officialAccount = officialAccountInstance
 	return
