@@ -48,8 +48,7 @@ func ServeWechat(c *gin.Context) {
 
 // GetServer 消息管理：接收事件，被动回复消息管理
 func GetServer(officialAccount *officialaccount.OfficialAccount, req *http.Request, writer http.ResponseWriter) *server.Server {
-	srv := new(server.Server)
-	srv.Context = officialAccount.GetContext()
+	srv := server.NewServer(officialAccount.GetContext())
 	srv.Request = req
 	srv.Writer = writer
 	return srv

@@ -24,7 +24,7 @@ import (
 
 // Server struct
 type Server struct {
-	server2.Server
+	*server2.Server
 	*context.Context
 	Writer  http.ResponseWriter
 	Request *http.Request
@@ -51,6 +51,7 @@ type Server struct {
 func NewServer(context *context.Context) *Server {
 	srv := new(Server)
 	srv.Context = context
+	srv.Server = server2.NewServer(context)
 	return srv
 }
 
