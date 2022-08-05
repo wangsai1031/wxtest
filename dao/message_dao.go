@@ -24,7 +24,7 @@ var MessageDaoInstance = &MessageDao{
 	},
 }
 
-func (d MessageDao) Save(ctx context.Context, msg *message2.MixMessage) (err error) {
+func (d MessageDao) Save(ctx context.Context, msg *message2.MixMessage, raw string) (err error) {
 
 	entity := model.MessageEntity{
 		ToUserName:   string(msg.ToUserName),
@@ -32,6 +32,7 @@ func (d MessageDao) Save(ctx context.Context, msg *message2.MixMessage) (err err
 		MsgType:      string(msg.MsgType),
 		Event:        string(msg.Event),
 		CreateTime:   msg.CreateTime,
+		Raw:          raw,
 	}
 
 	resourceByte, err := json.Marshal(msg)

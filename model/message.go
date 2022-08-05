@@ -7,6 +7,7 @@ type MessageEntity struct {
 	MsgType      string `gorm:"column:msg_type" json:"msg_type"`             // 消息类型
 	Event        string `gorm:"column:event" json:"event"`                   // 时间类型
 	Resource     string `gorm:"column:resource" json:"resource"`             // 消息原始内容
+	Raw          string `gorm:"column:raw" json:"raw"`                       // 消息原始内容
 	CreateTime   int64  `gorm:"column:create_time" json:"create_time"`       // 消息创建时间
 }
 

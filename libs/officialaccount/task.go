@@ -145,7 +145,7 @@ func SendMsgStatusCheck(e *WeixinEvent) (sendStatus *broadcast.Result, err error
 	// 发布中，3秒后放回队列
 	if sendStatus.MsgStatus == string(SendMsgStatusSending) {
 		util.SafeGo(func() {
-			time.Sleep(time.Duration(3) * time.Second)
+			time.Sleep(time.Duration(5) * time.Second)
 			SendMsgStatusCheckChan <- e
 		})
 

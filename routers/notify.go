@@ -29,6 +29,10 @@ func ServeWechat(c *gin.Context) {
 	srv.SkipValidate(true)
 	//设置接收消息的处理方法
 	srv.SetMessageHandler(func(mixMessage *message2.MixMessage) *message.Reply {
+		// 保存通知信息到数据库
+		go util.SafeGo(func() {
+			dao.MessageDaoInstance.Save(c, mixMessage, string(srv.RequestRawXMLMsg))
+		})
 		return MessageHandler(c, mixMessage)
 	})
 
@@ -56,11 +60,6 @@ func GetServer(officialAccount *officialaccount.OfficialAccount, req *http.Reque
 
 func MessageHandler(ctx context.Context, msg *message2.MixMessage) *message.Reply {
 	log.Trace.Info("MessageHandler ", msg)
-
-	// 保存通知信息到数据库
-	go util.SafeGo(func() {
-		dao.MessageDaoInstance.Save(ctx, msg)
-	})
 
 	switch msg.MsgType {
 
